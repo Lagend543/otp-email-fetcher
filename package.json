@@ -1,0 +1,17 @@
+{
+  "name": "otp-email-fetcher",
+  "version": "1.0.0",
+  "description": "Telegram bot OTP email fetcher - 24/7 on Render",
+  "main": "bot-render.js",
+  "scripts": {
+    "start": "node bot-render.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "node-telegram-bot-api": "^0.63.0"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}
