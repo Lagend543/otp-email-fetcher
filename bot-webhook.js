@@ -41,27 +41,8 @@ function generateCode() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// Initialize Bot with WEBHOOK
-const bot = new TelegramBot(BOT_TOKEN, { 
-  webHook: {
-    port: PORT,
-    host: '0.0.0.0',
-    key: undefined,
-    cert: undefined
-  }
-});
-
-// Express Server
-const app = express();
-app.use(cors());
-app.use(express.json());
-app.set('trust proxy', 1);
-
-// Webhook endpoint for Telegram
-app.post(`/bot${BOT_TOKEN}`, (req, res) => {
-  bot.processUpdate(req.body);
-  res.sendStatus(200);
-});
+// Initialize Bot (without webHook - we use Express)
+const bot = new TelegramBot(BOT_TOKEN);
 
 // Handle all messages
 bot.on('message', (msg) => {
@@ -123,6 +104,19 @@ bot.on('message', (msg) => {
 // Handle errors
 bot.on('polling_error', (error) => {
   console.error('Bot error:', error);
+});
+
+// Express Server
+const app = express();
+app.use(cors());
+app.use(express.json());
+app.set('trust proxy', 1);
+
+// Webhook endpoint for Telegram updates
+app.post(`/bot${BOT_TOKEN}`, (req, res) => {
+  console.log('📩 Webhook update received');
+  bot.processUpdate(req.body);
+  res.sendStatus(200);
 });
 
 // ==================== API ENDPOINTS ====================
@@ -292,4 +286,3 @@ process.on('SIGTERM', () => {
   saveData();
   process.exit(0);
 });
-                              
