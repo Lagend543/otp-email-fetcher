@@ -5,7 +5,7 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install
 
-COPY bot-render.js ./
+COPY bot-webhook.js ./
 
 EXPOSE 3000
 
