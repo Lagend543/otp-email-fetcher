@@ -2,9 +2,9 @@
   "name": "otp-email-fetcher",
   "version": "1.0.0",
   "description": "Telegram bot OTP email fetcher - 24/7 on Render",
-  "main": "bot-webhook.js",
+  "main": "bot-simple.js",
   "scripts": {
-    "start": "node bot-webhook.js"
+    "start": "node bot-simple.js"
   },
   "dependencies": {
     "express": "^4.18.2",
