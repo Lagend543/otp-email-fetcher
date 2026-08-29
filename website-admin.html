@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OTP Email Fetcher</title>
+    <title>OTP Email Fetcher - Telegram Bot</title>
     <style>
         * {
             margin: 0;
@@ -11,658 +11,590 @@
             box-sizing: border-box;
         }
 
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --success: #10b981;
+            --danger: #ef4444;
+            --dark: #0f172a;
+            --darker: #020617;
+            --light: #f1f5f9;
+            --gray: #64748b;
+            --shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--darker) 0%, #1e293b 100%);
+            color: #e2e8f0;
             min-height: 100vh;
-            padding: 20px;
+            overflow-x: hidden;
         }
 
         .container {
             max-width: 900px;
             margin: 0 auto;
+            padding: 20px;
         }
 
-        .header {
+        /* Header */
+        header {
             text-align: center;
-            color: white;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 20px;
             margin-bottom: 30px;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
         }
 
-        .header h1 {
+        header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 400px;
+            height: 400px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+        }
+
+        header h1 {
             font-size: 2.5em;
             margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
         }
 
-        .header p {
-            opacity: 0.9;
+        header p {
             font-size: 1.1em;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
         }
 
-        .main-card {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-            margin-bottom: 20px;
-        }
-
+        /* Tabs */
         .tabs {
             display: flex;
             gap: 10px;
-            margin-bottom: 25px;
-            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 30px;
+            background: rgba(15, 23, 42, 0.5);
+            padding: 10px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
             flex-wrap: wrap;
         }
 
         .tab-btn {
-            padding: 12px 24px;
+            flex: 1;
+            min-width: 120px;
+            padding: 12px 20px;
             border: none;
-            background: none;
+            background: rgba(99, 102, 241, 0.2);
+            color: #e2e8f0;
+            border-radius: 10px;
             cursor: pointer;
-            font-size: 16px;
-            color: #666;
-            border-bottom: 3px solid transparent;
+            font-size: 1em;
+            font-weight: 600;
             transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .tab-btn:hover {
+            background: rgba(99, 102, 241, 0.4);
+            transform: translateY(-2px);
         }
 
         .tab-btn.active {
-            color: #667eea;
-            border-bottom-color: #667eea;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-color: var(--primary);
+            box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
         }
 
+        /* Tab Content */
         .tab-content {
             display: none;
+            animation: fadeIn 0.3s ease;
         }
 
         .tab-content.active {
             display: block;
         }
 
-        .input-group {
-            display: flex;
-            gap: 10px;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Card */
+        .card {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             margin-bottom: 20px;
-            flex-wrap: wrap;
         }
 
-        .input-group input {
-            flex: 1;
-            min-width: 200px;
-            padding: 12px 16px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s;
+        .card h2 {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: var(--primary);
         }
 
-        .input-group input:focus {
+        /* Input Group */
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+            color: #cbd5e1;
+            font-weight: 600;
+        }
+
+        .input-group input,
+        .input-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 2px solid rgba(99, 102, 241, 0.2);
+            border-radius: 10px;
+            color: #e2e8f0;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus,
+        .input-group textarea:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: var(--primary);
+            background: rgba(15, 23, 42, 0.8);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
         }
 
+        /* Button */
         .btn {
-            padding: 12px 24px;
+            padding: 12px 25px;
             border: none;
-            border-radius: 8px;
-            font-size: 16px;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-            font-weight: 600;
-            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .btn-primary {
-            background: #667eea;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
+            width: 100%;
         }
 
         .btn-primary:hover {
-            background: #5568d3;
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
         }
 
-        .btn-small {
-            padding: 8px 16px;
-            font-size: 14px;
-        }
-
-        .btn-copy {
-            background: #48bb78;
-            color: white;
-        }
-
-        .btn-copy:hover {
-            background: #38a169;
-        }
-
-        .btn-delete {
-            background: #f56565;
-            color: white;
-        }
-
-        .btn-delete:hover {
-            background: #e53e3e;
-        }
-
-        .email-list {
-            display: grid;
-            gap: 15px;
-        }
-
-        .email-item {
-            background: #f7f7f7;
-            padding: 15px;
+        /* Message Item */
+        .message-item {
+            background: rgba(15, 23, 42, 0.6);
+            border-left: 4px solid var(--primary);
             border-radius: 8px;
-            border-left: 4px solid #667eea;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .email-info {
-            flex: 1;
-            min-width: 200px;
-        }
-
-        .email-address {
-            font-weight: 600;
-            font-size: 16px;
-            color: #333;
-            margin-bottom: 5px;
-        }
-
-        .email-code {
-            font-family: 'Courier New', monospace;
-            font-size: 18px;
-            font-weight: bold;
-            color: #667eea;
-            letter-spacing: 2px;
-        }
-
-        .email-meta {
-            font-size: 12px;
-            color: #999;
-            margin-top: 5px;
-        }
-
-        .message-card {
-            background: #f9f9f9;
             padding: 15px;
-            border-radius: 8px;
-            border-left: 4px solid #48bb78;
             margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .message-item:hover {
+            background: rgba(15, 23, 42, 0.8);
+            border-left-color: var(--secondary);
         }
 
         .message-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: start;
             margin-bottom: 10px;
             flex-wrap: wrap;
             gap: 10px;
         }
 
         .message-email {
+            color: var(--primary);
             font-weight: 600;
-            color: #667eea;
-            font-size: 14px;
         }
 
         .message-time {
-            font-size: 12px;
-            color: #999;
+            color: var(--gray);
+            font-size: 0.9em;
         }
 
-        .message-text {
-            color: #333;
-            line-height: 1.5;
-            word-break: break-word;
-            margin-bottom: 10px;
-            max-height: 150px;
-            overflow-y: auto;
-            background: white;
-            padding: 10px;
-            border-radius: 5px;
-            font-size: 14px;
-        }
-
-        .otp-codes {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-top: 10px;
-        }
-
-        .otp-badge {
-            background: #667eea;
+        .message-code {
+            background: var(--primary);
             color: white;
             padding: 8px 12px;
             border-radius: 6px;
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-            font-size: 14px;
+            font-weight: 600;
+            font-size: 1.1em;
+            display: inline-block;
+            margin: 10px 0;
             cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .message-code:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .message-text {
+            color: #cbd5e1;
+            word-break: break-word;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        /* Smart Links - Shows actual context text! */
+        .message-links {
+            margin-top: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .smart-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 16px;
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(99, 102, 241, 0.15));
+            border: 1px solid rgba(251, 191, 36, 0.4);
+            border-radius: 8px;
+            color: #fbbf24;
+            text-decoration: none;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            word-break: break-word;
+            max-width: 100%;
+        }
+
+        .smart-link:hover {
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.25), rgba(99, 102, 241, 0.25));
+            border-color: rgba(251, 191, 36, 0.6);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(251, 191, 36, 0.2);
+        }
+
+        .smart-link::before {
+            content: '🔗';
+            flex-shrink: 0;
+        }
+
+        /* Message Box */
+        .message {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid;
+        }
+
+        .message.info {
+            background: rgba(99, 102, 241, 0.1);
+            border-left-color: var(--primary);
+            color: #a5b4fc;
+        }
+
+        .message.success {
+            background: rgba(16, 185, 129, 0.1);
+            border-left-color: var(--success);
+            color: #86efac;
+        }
+
+        .message.error {
+            background: rgba(239, 68, 68, 0.1);
+            border-left-color: var(--danger);
+            color: #fca5a5;
+        }
+
+        /* API Status */
+        .api-status {
             display: flex;
             align-items: center;
-            gap: 8px;
-            transition: all 0.3s;
-        }
-
-        .otp-badge:hover {
-            background: #5568d3;
-            transform: scale(1.05);
-        }
-
-        .status {
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: none;
-        }
-
-        .status.show {
-            display: block;
-        }
-
-        .status.success {
-            background: #c6f6d5;
-            color: #22543d;
-            border-left: 4px solid #48bb78;
-        }
-
-        .status.error {
-            background: #fed7d7;
-            color: #742a2a;
-            border-left: 4px solid #f56565;
-        }
-
-        .status.info {
-            background: #bee3f8;
-            color: #2c5282;
-            border-left: 4px solid #667eea;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: #999;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #667eea;
-        }
-
-        .spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #e0e0e0;
-            border-top-color: #667eea;
-            border-radius: 50%;
-            animation: spin 0.6s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .controls {
-            display: flex;
             gap: 10px;
-            justify-content: flex-end;
-            flex-wrap: wrap;
-        }
-
-        .badge {
-            display: inline-block;
-            background: #667eea;
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            margin-left: 10px;
-        }
-
-        .admin-panel {
-            background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            color: white;
-        }
-
-        .admin-panel h3 {
-            margin-bottom: 15px;
-            color: white;
-        }
-
-        .admin-panel input {
-            color: #333;
-        }
-
-        .footer {
-            text-align: center;
-            color: white;
-            margin-top: 20px;
-            font-size: 12px;
-        }
-
-        .admin-unlock {
-            text-align: center;
-            padding: 40px 20px;
-        }
-
-        .admin-unlock h2 {
-            color: #667eea;
+            padding: 12px 15px;
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 10px;
             margin-bottom: 20px;
         }
 
-        .admin-unlock input {
-            padding: 15px;
-            font-size: 18px;
-            letter-spacing: 2px;
-            text-align: center;
-            max-width: 300px;
+        .api-status .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
         }
 
-        .admin-unlock .btn {
-            margin-top: 20px;
+        .api-status.connected .dot {
+            background: var(--success);
         }
 
+        .api-status.disconnected .dot {
+            background: var(--danger);
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Responsive */
         @media (max-width: 600px) {
-            .header h1 {
-                font-size: 1.8em;
-            }
+            header h1 { font-size: 1.8em; }
+            .tabs { flex-direction: column; }
+            .tab-btn { min-width: auto; }
+            .smart-link { max-width: 90%; }
+        }
 
-            .email-item {
-                flex-direction: column;
-                align-items: flex-start;
-            }
+        /* Copy Feedback */
+        .copy-feedback {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--success);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            animation: slideIn 0.3s ease, slideOut 0.3s ease 2.7s;
+            z-index: 1000;
+        }
 
-            .controls {
-                width: 100%;
-            }
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
 
-            .btn {
-                width: 100%;
-            }
-
-            .input-group {
-                flex-direction: column;
-            }
-
-            .input-group input {
-                width: 100%;
-            }
+        @keyframes slideOut {
+            to { transform: translateX(400px); opacity: 0; }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
+        <header>
             <h1>📧 OTP Email Fetcher</h1>
-            <p>View emails from your Telegram bot</p>
+            <p>Receive temporary emails from your Telegram bot - 24/7 running</p>
+        </header>
+
+        <div class="api-status" id="apiStatus">
+            <div class="dot"></div>
+            <span id="apiStatusText">Connecting...</span>
         </div>
 
-        <div class="main-card">
-            <div id="status" class="status"></div>
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('view')">👁️ View Emails</button>
+            <button class="tab-btn" onclick="switchTab('all')">📨 All Messages</button>
+            <button class="tab-btn" onclick="switchTab('admin')">🔐 Admin</button>
+        </div>
 
-            <div class="tabs">
-                <button class="tab-btn active" onclick="switchTab('view')">View Emails</button>
-                <button class="tab-btn" onclick="switchTab('all')">All Messages</button>
-                <button class="tab-btn" onclick="switchTab('admin')">Admin 🔐</button>
-            </div>
-
-            <!-- View Emails Tab -->
-            <div id="view" class="tab-content active">
+        <!-- View Emails Tab -->
+        <div id="view" class="tab-content active">
+            <div class="card">
+                <h2>👁️ View Emails</h2>
+                <p style="color: #94a3b8; margin-bottom: 20px;">Enter your 6-digit code to view emails</p>
+                
                 <div class="input-group">
-                    <input type="text" id="codeInput" placeholder="Enter 6-digit code..." maxlength="6">
-                    <button class="btn btn-primary" onclick="fetchMessages()">Get Emails</button>
-                    <button class="btn btn-primary" onclick="autoRefresh()" id="refreshBtn">🔄 Auto Refresh</button>
+                    <label>6-Digit Code</label>
+                    <input type="text" id="viewCode" placeholder="e.g., 123456" maxlength="6">
                 </div>
-                <div id="messagesContainer"></div>
-            </div>
 
-            <!-- All Messages Tab -->
-            <div id="all" class="tab-content">
-                <div class="input-group">
-                    <button class="btn btn-primary" onclick="fetchAllMessages()">Load Recent Messages</button>
-                    <button class="btn btn-primary" onclick="autoRefreshAll()" id="refreshAllBtn">🔄 Auto Refresh</button>
-                </div>
-                <div id="allMessagesContainer"></div>
-            </div>
+                <button class="btn btn-primary" onclick="getEmails()">🔍 Get Emails</button>
 
-            <!-- Admin Panel Tab -->
-            <div id="admin" class="tab-content">
-                <div id="adminContent"></div>
+                <div id="emailsResult"></div>
             </div>
         </div>
 
-        <div class="footer">
-            <p>🔗 API: <span id="apiStatus">Connecting...</span></p>
-            <p style="margin-top: 10px;">Running 24/7 on Render - 100% FREE ✅</p>
+        <!-- All Messages Tab -->
+        <div id="all" class="tab-content">
+            <div class="card">
+                <h2>📨 All Messages</h2>
+                <button class="btn btn-primary" onclick="getAllMessages()" style="margin-bottom: 20px;">📥 Load Messages</button>
+                <div id="allMessagesResult"></div>
+            </div>
+        </div>
+
+        <!-- Admin Tab -->
+        <div id="admin" class="tab-content">
+            <div class="card">
+                <h2>🔐 Admin Panel</h2>
+                <div id="adminLogin">
+                    <p style="color: #94a3b8; margin-bottom: 20px;">Enter admin password</p>
+                    <div class="input-group">
+                        <label>Password</label>
+                        <input type="password" id="adminPassword" placeholder="••••••" onkeypress="if(event.key==='Enter') verifyAdmin()">
+                    </div>
+                    <button class="btn btn-primary" onclick="verifyAdmin()">🔓 Unlock</button>
+                </div>
+
+                <div id="adminPanel" style="display: none;">
+                    <div style="background: rgba(16, 185, 129, 0.1); padding: 20px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid var(--success);">
+                        <h3 style="color: var(--success); margin-bottom: 15px;">➕ Add Email</h3>
+                        <div class="input-group">
+                            <label>Email Address</label>
+                            <input type="email" id="adminEmail" placeholder="example@email.com">
+                        </div>
+                        <button class="btn btn-primary" onclick="addEmail()" style="background: var(--success);">Add Email</button>
+                    </div>
+
+                    <div id="adminEmailList"></div>
+                    <button class="btn btn-primary" style="background: var(--danger); margin-top: 20px;" onclick="logoutAdmin()">Logout</button>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
-        // Get API URL from localStorage or prompt
-        let API_URL = localStorage.getItem('API_URL');
-        
-        if (!API_URL) {
-            const url = prompt('Enter your Render API URL:\n(Example: https://otp-email-fetcher.onrender.com/api)');
-            if (url) {
-                let cleanUrl = url.replace(/\/$/, '');
-                if (!cleanUrl.endsWith('/api')) {
-                    cleanUrl = cleanUrl + '/api';
-                }
-                API_URL = cleanUrl;
-                localStorage.setItem('API_URL', API_URL);
-            } else {
-                API_URL = 'http://localhost:3000/api';
-            }
-        }
+        let apiUrl = localStorage.getItem('apiUrl') || 'https://otp-email-fetcher.onrender.com/api';
+        let isAdminLoggedIn = false;
 
-        let refreshInterval = null;
-        let refreshAllInterval = null;
-        let adminAuthenticated = false;
+        document.addEventListener('DOMContentLoaded', () => {
+            checkApiStatus();
+            setInterval(checkApiStatus, 5000);
+        });
 
-        // Check API
-        async function checkAPI() {
-            try {
-                const res = await fetch(`${API_URL}/health`);
-                if (res.ok) {
-                    document.getElementById('apiStatus').textContent = '✅ Connected';
-                } else {
-                    document.getElementById('apiStatus').textContent = '❌ Offline';
-                }
-            } catch {
-                document.getElementById('apiStatus').textContent = '❌ Connection Failed';
-            }
-        }
-
-        // Switch tabs
-        function switchTab(tab) {
+        function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            document.getElementById(tab).classList.add('active');
+            document.getElementById(tabName).classList.add('active');
             event.target.classList.add('active');
-
-            if (tab === 'admin') {
-                renderAdminPanel();
-            }
         }
 
-        // Show status
-        function showStatus(message, type = 'info') {
-            const statusEl = document.getElementById('status');
-            statusEl.textContent = message;
-            statusEl.className = `status show ${type}`;
-            setTimeout(() => statusEl.classList.remove('show'), 4000);
-        }
-
-        // ==================== ADMIN PANEL ====================
-
-        function renderAdminPanel() {
-            const container = document.getElementById('adminContent');
-
-            if (!adminAuthenticated) {
-                container.innerHTML = `
-                    <div class="admin-unlock">
-                        <h2>🔐 Admin Panel</h2>
-                        <p style="margin-bottom: 20px; color: #666;">Enter password to access admin panel</p>
-                        <input type="password" id="adminPassword" placeholder="Enter password" 
-                               onkeypress="if(event.key==='Enter') verifyAdminPassword()">
-                        <button class="btn btn-primary" onclick="verifyAdminPassword()">Unlock Admin Panel</button>
-                    </div>
-                `;
-                document.getElementById('adminPassword').focus();
-            } else {
-                showAdminControls();
-            }
-        }
-
-        async function verifyAdminPassword() {
-            const password = document.getElementById('adminPassword').value;
-
-            if (!password) {
-                showStatus('❌ Please enter password', 'error');
-                return;
-            }
-
+        async function checkApiStatus() {
             try {
-                const res = await fetch(`${API_URL}/admin/verify`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password })
-                });
-
-                if (res.ok) {
-                    adminAuthenticated = true;
-                    showStatus('✅ Admin access granted!', 'success');
-                    showAdminControls();
+                const response = await fetch(`${apiUrl}/health`);
+                if (response.ok) {
+                    document.getElementById('apiStatus').className = 'api-status connected';
+                    document.getElementById('apiStatusText').textContent = '✅ API Connected';
                 } else {
-                    showStatus('❌ Invalid password', 'error');
+                    setDisconnected();
                 }
-            } catch (err) {
-                showStatus('❌ Connection error', 'error');
+            } catch (e) {
+                setDisconnected();
             }
         }
 
-        function showAdminControls() {
-            const container = document.getElementById('adminContent');
-            container.innerHTML = `
-                <div class="admin-panel">
-                    <h3>👨‍💼 Admin Controls</h3>
-                    <p style="margin-bottom: 15px; opacity: 0.9;">Logged in as Admin ✅</p>
-                </div>
-
-                <div class="admin-panel" style="background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);">
-                    <h3>➕ Add New Email</h3>
-                    <div class="input-group">
-                        <input type="email" id="newEmail" placeholder="example@gmail.com" style="color: #333;">
-                        <button class="btn btn-primary" onclick="addEmailAdmin()">Add Email</button>
-                    </div>
-                </div>
-
-                <h3 style="margin-top: 20px; margin-bottom: 15px; color: #333;">📧 Manage Emails & Codes</h3>
-                <div id="emailsContainer"></div>
-
-                <button class="btn btn-primary" onclick="logoutAdmin()" style="margin-top: 20px; width: 100%; background: #f56565;">Logout Admin</button>
-            `;
-
-            fetchEmailsAdmin();
+        function setDisconnected() {
+            document.getElementById('apiStatus').className = 'api-status disconnected';
+            document.getElementById('apiStatusText').textContent = '❌ API Disconnected';
         }
 
-        async function fetchEmailsAdmin() {
-            const container = document.getElementById('emailsContainer');
-            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+        async function getEmails() {
+            const code = document.getElementById('viewCode').value.trim();
+            if (!code) return;
 
             try {
-                const res = await fetch(`${API_URL}/emails`);
-                const emails = await res.json();
+                const response = await fetch(`${apiUrl}/messages/${code}`);
+                if (!response.ok) return showMessage('Invalid code', 'error');
 
-                if (emails.length === 0) {
-                    container.innerHTML = '<div class="empty-state"><p>No emails added yet</p></div>';
-                } else {
-                    container.innerHTML = `
-                        <div class="email-list">
-                            ${emails.map(e => `
-                                <div class="email-item">
-                                    <div class="email-info">
-                                        <div class="email-address">📧 ${e.email}</div>
-                                        <div class="email-code">${e.code}</div>
-                                        <div class="email-meta">${e.messageCount} messages</div>
-                                    </div>
-                                    <div class="controls">
-                                        <button class="btn btn-small btn-copy" onclick="copyToClipboard('${e.code}')">Copy</button>
-                                        <button class="btn btn-small btn-delete" onclick="deleteEmailAdmin('${e.email}')">Delete</button>
-                                    </div>
-                                </div>
-                            `).join('')}
+                const data = await response.json();
+                displayEmails(data);
+            } catch (e) {
+                showMessage('Error connecting to API', 'error');
+            }
+        }
+
+        function displayEmails(data) {
+            let html = `<div class="message success" style="margin-top: 20px;">✅ Found ${data.messageCount} message(s)</div>`;
+
+            data.messages.forEach(msg => {
+                const date = new Date(msg.timestamp).toLocaleString();
+                html += `<div class="message-item">
+                    <div class="message-header">
+                        <span class="message-email">${data.email}</span>
+                        <span class="message-time">${date}</span>
+                    </div>
+                    ${msg.codes.length > 0 ? `<div class="message-code" onclick="copyToClipboard('${msg.codes[0]}')">${msg.codes[0]} 📋</div>` : ''}
+                    <div class="message-text">${escapeHtml(msg.text)}</div>
+                    ${msg.links && msg.links.length > 0 ? `<div class="message-links">
+                        ${msg.links.map(link => `<a href="${link.url}" target="_blank" class="smart-link" title="${link.url}">${link.text}</a>`).join('')}
+                    </div>` : ''}
+                </div>`;
+            });
+
+            document.getElementById('emailsResult').innerHTML = html;
+        }
+
+        async function getAllMessages() {
+            try {
+                const response = await fetch(`${apiUrl}/all-messages`);
+                const data = await response.json();
+
+                let html = `<div class="message info">📨 Last ${data.length} messages</div>`;
+                data.forEach(msg => {
+                    const date = new Date(msg.timestamp).toLocaleString();
+                    html += `<div class="message-item">
+                        <div class="message-header">
+                            <span class="message-email">${msg.email}</span>
+                            <span class="message-time">${date}</span>
                         </div>
-                    `;
-                }
-            } catch (err) {
-                container.innerHTML = '<div class="empty-state"><p>❌ Error loading emails</p></div>';
-            }
-        }
-
-        async function addEmailAdmin() {
-            const email = document.getElementById('newEmail').value;
-            const password = 'OSM77'; // Hardcoded since already authenticated
-
-            if (!email) {
-                showStatus('❌ Please enter an email', 'error');
-                return;
-            }
-
-            try {
-                const res = await fetch(`${API_URL}/admin/add-email`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
+                        ${msg.codes.length > 0 ? `<div class="message-code" onclick="copyToClipboard('${msg.codes[0]}')">${msg.codes[0]} 📋</div>` : ''}
+                        <div class="message-text">${escapeHtml(msg.text)}</div>
+                        ${msg.links && msg.links.length > 0 ? `<div class="message-links">
+                            ${msg.links.map(link => `<a href="${link.url}" target="_blank" class="smart-link" title="${link.url}">${link.text}</a>`).join('')}
+                        </div>` : ''}
+                    </div>`;
                 });
 
-                const data = await res.json();
-                if (data.success) {
-                    showStatus(`✅ Email added! Code: ${data.code}`, 'success');
-                    document.getElementById('newEmail').value = '';
-                    fetchEmailsAdmin();
-                }
-            } catch (err) {
-                showStatus('❌ Error adding email', 'error');
+                document.getElementById('allMessagesResult').innerHTML = html;
+            } catch (e) {
+                showMessage('Error loading messages', 'error');
             }
         }
 
-        async function deleteEmailAdmin(email) {
-            if (!confirm(`Delete ${email}?\n\n⚠️ This will delete the code and all messages!\n\nIf you add the same email again, a new code will be generated.`)) {
-                return;
-            }
-
-            const password = 'OSM77'; // Hardcoded since already authenticated
-
+        async function verifyAdmin() {
+            const password = document.getElementById('adminPassword').value;
             try {
-                const res = await fetch(`${API_URL}/admin/delete-email/${encodeURIComponent(email)}`, {
-                    method: 'DELETE',
+                const response = await fetch(`${apiUrl}/admin/verify`, {
+                    method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ password })
                 });
 
-                if (res.ok) {
-                    showStatus('✅ Email deleted! Code no longer works.', 'success');
-                    fetchEmailsAdmin();
+                if (response.ok) {
+                    isAdminLoggedIn = true;
+                    document.getElementById('adminLogin').style.display = 'none';
+                    document.getElementById('adminPanel').style.display = 'block';
+                    loadAdminEmails();
                 } else {
-                    showStatus('❌ Error deleting email', 'error');
+                    showMessage('Invalid password', 'error');
                 }
-            } catch (err) {
-                showStatus('❌ Connection error', 'error');
+            } catch (e) {
+                showMessage('Error verifying password', 'error');
             }
         }
 
-  
+        async function loadAdminEmails() {
+            try {
+                const response = await fetch(`${apiUrl}/emails`);
+                const emails = await response.json();
+
+                let html = '';
+                emails.forEach(item => {
+                    html += `<div class="message-item">
+                        <div class="message-header">
+                            <div>
+                                <div class="message-email">${item.email}</div>
+                                <div class="message-time">Code: <strong>${item.code}</strong> | ${item.messages} messages</div>
+                            </div>
+                           
