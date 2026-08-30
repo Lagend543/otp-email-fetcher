@@ -156,36 +156,17 @@
             color: #fcd34d;
         }
 
-        .entity-links {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 12px;
-        }
-
-        .entity-link-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 10px 16px;
-            background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(99, 102, 241, 0.15));
-            border: 1px solid rgba(251, 191, 36, 0.5);
-            border-radius: 8px;
+        /* Links woven directly into the message text, same spot Telegram
+           shows them - not a separate list, just styled inline text */
+        .woven-link {
             color: #fbbf24;
-            text-decoration: none;
-            font-weight: 700;
-            font-size: 1em;
-            transition: all 0.2s;
+            text-decoration: underline;
+            font-weight: 800;
+            transition: color 0.2s;
         }
 
-        .entity-link-btn::before {
-            content: '🔗';
-        }
-
-        .entity-link-btn:hover {
-            background: linear-gradient(135deg, rgba(251, 191, 36, 0.25), rgba(99, 102, 241, 0.25));
-            border-color: rgba(251, 191, 36, 0.8);
-            transform: translateY(-2px);
+        .woven-link:hover {
+            color: #fcd34d;
         }
 
         .email-item {
@@ -236,6 +217,10 @@
 </head>
 <body>
     <div class="container">
+        <div style="background: #22c55e; color: #000; text-align: center; padding: 14px; border-radius: 10px; margin-bottom: 20px; font-weight: 900; font-size: 1.2em;">
+            🟢 VERSION 4 — LINKS INLINE IN TEXT
+        </div>
+
         <header>
             <h1>📧 OTP Email Fetcher</h1>
             <p>View your emails - Simple & Fast</p>
@@ -351,8 +336,7 @@
                     const date = new Date(msg.timestamp).toLocaleString();
                     html += `<div>
                         <strong style="color: var(--primary);">${date}</strong>
-                        <div class="message-box">${linkify(escapeHtml(msg.text))}</div>
-                        ${renderEntityLinks(msg.links)}
+                        <div class="message-box">${renderMessageText(msg.text, msg.links)}</div>
                     </div>`;
                 });
                 
@@ -468,18 +452,45 @@
             return div.innerHTML;
         }
 
-        // Renders buttons for links that were hidden behind styled text
-        // (e.g. Telegram's "Restart membership" hyperlink) using the bot's
-        // extracted { text, url } pairs. The raw message text is never
-        // touched - these are purely additive.
-        function renderEntityLinks(links) {
-            if (!links || links.length === 0) return '';
-            const buttons = links.map(link => {
+        // Renders the raw message text with links woven in AT THEIR EXACT
+        // ORIGINAL POSITION - same as how Telegram itself displays them
+        // (e.g. "...Plans start at ₹149/month. Restart membership" where
+        // "Restart membership" is the clickable part). Uses the offset/length
+        // the bot recorded for each hidden hyperlink to splice in a real <a>
+        // tag right where that text sits, instead of listing links separately.
+        // Falls back to plain linkify() for any literal https:// text that
+        // isn't covered by a hyperlink entity. The underlying raw text is
+        // never changed - this only affects how it's displayed.
+        function renderMessageText(text, links) {
+            if (!links || links.length === 0) {
+                return linkify(escapeHtml(text));
+            }
+
+            // Sort by position so we can walk through the text left to right
+            const sorted = [...links].sort((a, b) => a.offset - b.offset);
+
+            let html = '';
+            let cursor = 0;
+
+            sorted.forEach(link => {
+                if (link.offset < cursor) return; // skip overlapping entities, just in case
+
+                // Plain text before this link - escape + linkify any bare URLs in it
+                const before = text.substring(cursor, link.offset);
+                html += linkify(escapeHtml(before));
+
+                // The link itself, using its real visible label
                 const safeUrl = escapeHtml(link.url);
-                const safeText = escapeHtml(link.text);
-                return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="entity-link-btn">${safeText}</a>`;
-            }).join('');
-            return `<div class="entity-links">${buttons}</div>`;
+                const safeLabel = escapeHtml(link.text);
+                html += `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="woven-link">${safeLabel}</a>`;
+
+                cursor = link.offset + link.length;
+            });
+
+            // Any remaining text after the last link
+            html += linkify(escapeHtml(text.substring(cursor)));
+
+            return html;
         }
 
         // Turns URLs inside already-escaped text into clickable links.
