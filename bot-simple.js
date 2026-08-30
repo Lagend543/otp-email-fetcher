@@ -58,7 +58,7 @@ function extractEntityLinks(text, entities) {
 
     if (url && !seen.has(url)) {
       const label = text.substring(entity.offset, entity.offset + entity.length);
-      links.push({ text: label, url: url });
+      links.push({ text: label, url: url, offset: entity.offset, length: entity.length });
       seen.add(url);
     }
   });
@@ -322,4 +322,4 @@ process.on('SIGTERM', () => {
   bot.stopPolling();
   process.exit(0);
 });
-      
+       
