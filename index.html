@@ -508,26 +508,45 @@
 
     <script>
         let apiUrl = localStorage.getItem('apiUrl') || 'https://otp-email-fetcher.onrender.com/api';
-        document.getElementById('addrUrl').textContent = window.location.hostname || 'lagend-otp.onrender.com';
 
-        document.addEventListener('DOMContentLoaded', () => {
-            checkApiStatus();
-            setInterval(checkApiStatus, 5000);
-        });
+        // Defensive: this shouldn't fail, but if it ever does, it must not
+        // block the connection check below from running.
+        try {
+            document.getElementById('addrUrl').textContent = window.location.hostname || 'lagend-otp.onrender.com';
+        } catch (e) {
+            console.error('addrUrl update failed', e);
+        }
 
-        document.querySelectorAll('.vtype').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.vtype').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+        try {
+            document.querySelectorAll('.vtype').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.vtype').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                });
             });
-        });
+        } catch (e) {
+            console.error('vtype setup failed', e);
+        }
+
+        // Start checking connection status right away - don't wait on
+        // DOMContentLoaded (script already runs at the end of <body>, so
+        // the DOM is ready) and don't let anything above block this.
+        checkApiStatus();
+        setInterval(checkApiStatus, 5000);
 
         function openAdmin() { document.getElementById('adminModal').style.display = 'flex'; }
         function closeAdmin() { document.getElementById('adminModal').style.display = 'none'; }
 
         async function checkApiStatus() {
             try {
-                const response = await fetch(`${apiUrl}/health`);
+                // Hard 15-second timeout - a request should never be allowed
+                // to hang forever with no feedback, even on a slow cold start.
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+                const response = await fetch(`${apiUrl}/health`, { signal: controller.signal });
+                clearTimeout(timeoutId);
+
                 if (response.ok) {
                     document.getElementById('apiStatus').className = 'api-status connected';
                     document.getElementById('apiStatusText').textContent = 'Connected';
@@ -554,26 +573,4 @@
             ];
             for (const p of patterns) {
                 const m = text.match(p);
-                if (m) return m[1];
-            }
-            return null;
-        }
-
-        function toggleFull(id) {
-            const el = document.getElementById(id);
-            const arrow = document.getElementById(id + '-arrow');
-            const isHidden = el.style.display === 'none';
-            el.style.display = isHidden ? 'block' : 'none';
-            arrow.textContent = isHidden ? '▴' : '▾';
-        }
-
-        function renderResultCard(msg, index) {
-            const date = new Date(msg.timestamp).toLocaleString();
-            const code = extractLikelyCode(msg.text);
-            const bodyId = `msg-body-${index}`;
-
-            let html = `<div class="result-card">`;
-            html += `<div class="result-date">${date}</div>`;
-
-            if (code) {
-                html += `<div class="otp-reveal" onclick="copyToClipboard('${code}')">
+                       
