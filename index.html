@@ -1,311 +1,536 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OTP Email Fetcher</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        :root {
-            --primary: #6366f1;
-            --success: #10b981;
-            --danger: #ef4444;
-            --dark: #0f172a;
-            --gray: #64748b;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, var(--dark) 0%, #1e293b 100%);
-            color: #e2e8f0;
-            min-height: 100vh;
-        }
-        
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
-        header {
-            text-align: center;
-            padding: 40px 20px;
-            background: linear-gradient(135deg, var(--primary) 0%, #ec4899 100%);
-            border-radius: 20px;
-            margin-bottom: 30px;
-            box-shadow: 0 20px 25px rgba(0,0,0,0.3);
-        }
-        
-        header h1 { font-size: 2.5em; margin-bottom: 10px; }
-        header p { font-size: 1.1em; opacity: 0.95; }
-        
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-        }
-        
-        .tab-btn {
-            flex: 1;
-            min-width: 120px;
-            padding: 12px 20px;
-            border: none;
-            background: rgba(99, 102, 241, 0.2);
-            color: #e2e8f0;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-        
-        .tab-btn.active {
-            background: linear-gradient(135deg, var(--primary) 0%, #ec4899 100%);
-            box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
-        }
-        
-        .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.3s; }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .card {
-            background: rgba(30, 41, 59, 0.8);
-            border: 1px solid rgba(99, 102, 241, 0.2);
-            border-radius: 15px;
-            padding: 25px;
-            backdrop-filter: blur(10px);
-        }
-        
-        .card h2 { font-size: 1.5em; margin-bottom: 20px; color: var(--primary); }
-        
-        .input-group { margin-bottom: 15px; }
-        .input-group label { display: block; margin-bottom: 8px; color: #cbd5e1; font-weight: 600; }
-        
-        input, textarea {
-            width: 100%;
-            padding: 12px 15px;
-            background: rgba(15, 23, 42, 0.6);
-            border: 2px solid rgba(99, 102, 241, 0.2);
-            border-radius: 10px;
-            color: #e2e8f0;
-            font-size: 1em;
-        }
-        
-        input:focus, textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-            background: rgba(15, 23, 42, 0.8);
-        }
-        
-        .btn {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 10px;
-            font-size: 1em;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-bottom: 10px;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%);
-            color: white;
-        }
-        
-        .btn-primary:hover { transform: translateY(-2px); }
-        
-        .btn-danger {
-            background: var(--danger);
-            color: white;
-            width: auto;
-            padding: 8px 16px;
-        }
-        
-        .message-box {
-            background: rgba(15, 23, 42, 0.6);
-            border-left: 4px solid var(--primary);
-            border-radius: 8px;
-            padding: 15px;
-            margin: 15px 0;
-            white-space: pre-wrap;
-            word-break: break-word;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-size: 1.15em;
-            font-weight: 700;
-            color: #f1f5f9;
-            line-height: 1.7;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        
-        .inline-link {
-            color: #fbbf24;
-            text-decoration: underline;
-            word-break: break-all;
-            transition: color 0.2s;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lagend X Code</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        .inline-link:hover {
-            color: #fcd34d;
-        }
+    :root {
+        --bg: #070404;
+        --bg-panel: #150708;
+        --panel-border: rgba(229, 9, 20, 0.35);
+        --red: #e50914;
+        --red-dark: #8a0610;
+        --text: #f5f5f5;
+        --text-dim: #9ca3af;
+        --gold: #fbbf24;
+        --success: #22c55e;
+        --danger: #ef4444;
+        --font-display: 'Bebas Neue', 'Segoe UI', sans-serif;
+        --font-body: 'Inter', 'Segoe UI', sans-serif;
+    }
 
-        /* Links woven directly into the message text, same spot Telegram
-           shows them - not a separate list, just styled inline text */
-        .woven-link {
-            color: #fbbf24;
-            text-decoration: underline;
-            font-weight: 800;
-            transition: color 0.2s;
-        }
+    body {
+        font-family: var(--font-body);
+        background:
+            radial-gradient(ellipse at top, rgba(229,9,20,0.14), transparent 60%),
+            linear-gradient(180deg, #0a0303 0%, #050202 100%);
+        color: var(--text);
+        min-height: 100vh;
+    }
 
-        .woven-link:hover {
-            color: #fcd34d;
-        }
+    .container { max-width: 1000px; margin: 0 auto; padding: 18px; }
 
-        .email-item {
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(99, 102, 241, 0.2);
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .api-status {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 12px 15px;
-            background: rgba(30, 41, 59, 0.8);
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
-        
-        .dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-        
-        .api-status.connected .dot { background: var(--success); }
-        .api-status.disconnected .dot { background: var(--danger); animation: none; }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        
-        .message { padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 4px solid; }
-        .message.success { background: rgba(16, 185, 129, 0.1); border-left-color: var(--success); color: #86efac; }
-        .message.error { background: rgba(239, 68, 68, 0.1); border-left-color: var(--danger); color: #fca5a5; }
-        
-        @media (max-width: 600px) {
-            header h1 { font-size: 1.8em; }
-            .tabs { flex-direction: column; }
-        }
-    </style>
+    header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 4px 20px;
+    }
+
+    .logo { display: flex; align-items: center; gap: 10px; }
+
+    .logo-mark {
+        width: 30px; height: 30px;
+        background: var(--red);
+        border-radius: 6px;
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--font-display);
+        font-size: 1.2em;
+        color: #fff;
+        flex-shrink: 0;
+    }
+
+    .logo-text {
+        font-family: var(--font-display);
+        font-size: 1.5em;
+        letter-spacing: 1px;
+        color: var(--text);
+    }
+    .logo-text span { color: var(--red); }
+
+    .admin-link {
+        background: transparent;
+        border: 1px solid rgba(255,255,255,0.15);
+        color: var(--text-dim);
+        padding: 8px 14px;
+        border-radius: 8px;
+        font-size: 0.85em;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .admin-link:hover { border-color: var(--red); color: var(--text); }
+
+    .addr-bar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: rgba(0,0,0,0.5);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 10px;
+        padding: 10px 16px;
+        margin-bottom: 14px;
+        flex-wrap: wrap;
+    }
+    .addr-dots { display: flex; gap: 6px; flex-shrink: 0; }
+    .addr-dots span { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+    .addr-dots span:nth-child(1) { background: #ef4444; }
+    .addr-dots span:nth-child(2) { background: #f59e0b; }
+    .addr-dots span:nth-child(3) { background: #22c55e; }
+    .addr-url { color: var(--text-dim); font-size: 0.85em; flex: 1; min-width: 140px; }
+    .addr-tag { color: var(--red); font-size: 0.7em; letter-spacing: 1px; font-weight: 700; white-space: nowrap; }
+
+    .ticker {
+        text-align: center;
+        color: var(--text-dim);
+        font-size: 0.72em;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        margin: 16px 0;
+        opacity: 0.6;
+    }
+
+    .hero {
+        display: grid;
+        grid-template-columns: 1.1fr 1fr;
+        gap: 30px;
+        align-items: center;
+        margin: 20px 0;
+    }
+
+    .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(229,9,20,0.15);
+        border: 1px solid var(--panel-border);
+        color: var(--red);
+        font-size: 0.75em;
+        font-weight: 700;
+        letter-spacing: 1px;
+        padding: 6px 12px;
+        border-radius: 20px;
+        margin-bottom: 16px;
+    }
+
+    .hero h1 {
+        font-family: var(--font-display);
+        font-size: 2.8em;
+        line-height: 0.95;
+        letter-spacing: 1px;
+        margin-bottom: 16px;
+    }
+    .hero h1 .accent { color: var(--red); display: block; }
+
+    .hero p {
+        color: var(--text-dim);
+        font-size: 0.95em;
+        line-height: 1.6;
+        max-width: 40ch;
+    }
+
+    .card {
+        background: linear-gradient(160deg, rgba(30,8,9,0.9), rgba(10,3,3,0.95));
+        border: 1px solid var(--panel-border);
+        border-radius: 18px;
+        padding: 26px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    }
+
+    .card h2 { font-size: 1.3em; margin-bottom: 4px; }
+    .card .sub { color: var(--text-dim); font-size: 0.85em; margin-bottom: 20px; }
+
+    .field-label {
+        font-size: 0.7em;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        color: var(--red);
+        font-weight: 700;
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    input {
+        width: 100%;
+        padding: 14px 16px;
+        background: rgba(0,0,0,0.5);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 10px;
+        color: var(--text);
+        font-size: 1.1em;
+        letter-spacing: 3px;
+        text-align: center;
+        font-family: var(--font-body);
+        font-weight: 700;
+        margin-bottom: 20px;
+    }
+    input:focus {
+        outline: none;
+        border-color: var(--red);
+        box-shadow: 0 0 0 3px rgba(229,9,20,0.15);
+    }
+    input::placeholder { letter-spacing: normal; font-weight: 400; color: #6b7280; }
+
+    .verify-label {
+        font-size: 0.7em;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        margin-bottom: 10px;
+        text-align: center;
+    }
+
+    .verify-types {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 6px;
+        margin-bottom: 22px;
+    }
+    .vtype {
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 8px;
+        padding: 8px 2px;
+        color: var(--text-dim);
+        font-size: 0.62em;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex; flex-direction: column; align-items: center; gap: 4px;
+    }
+    .vtype span { line-height: 1.1; }
+    .vtype .ic { font-size: 1.2em; }
+    .vtype:hover { border-color: rgba(229,9,20,0.4); }
+    .vtype.active { background: rgba(229,9,20,0.15); border-color: var(--red); color: var(--text); }
+
+    .btn-continue {
+        width: 100%;
+        padding: 15px;
+        border: none;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--red), var(--red-dark));
+        color: #fff;
+        font-size: 1em;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 0.15s, box-shadow 0.15s;
+        box-shadow: 0 10px 25px rgba(229,9,20,0.3);
+    }
+    .btn-continue:active { transform: scale(0.98); }
+
+    .trust-line { text-align: center; color: #6b7280; font-size: 0.72em; margin-top: 14px; }
+
+    .api-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 18px auto 0;
+        padding: 6px 14px;
+        background: rgba(255,255,255,0.04);
+        border-radius: 20px;
+        font-size: 0.78em;
+        color: var(--text-dim);
+        width: fit-content;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; animation: pulse 2s infinite; }
+    .api-status.connected .dot { background: var(--success); }
+    .api-status.disconnected .dot { background: var(--danger); animation: none; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    .status-wrap { text-align: center; }
+
+    #emailsResult { margin-top: 26px; }
+
+    .message {
+        padding: 12px 16px;
+        border-radius: 10px;
+        margin-bottom: 16px;
+        border-left: 3px solid;
+        font-size: 0.9em;
+    }
+    .message.success { background: rgba(34,197,94,0.1); border-left-color: var(--success); color: #86efac; }
+    .message.error { background: rgba(239,68,68,0.1); border-left-color: var(--danger); color: #fca5a5; }
+
+    .result-card {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 14px;
+        padding: 18px;
+        margin-bottom: 18px;
+    }
+    .result-date { color: var(--text-dim); font-size: 0.8em; margin-bottom: 14px; }
+
+    .otp-reveal {
+        text-align: center;
+        padding: 26px 16px;
+        border-radius: 14px;
+        background: linear-gradient(145deg, rgba(229,9,20,0.14), rgba(0,0,0,0.35));
+        border: 1px solid var(--red);
+        box-shadow: 0 0 40px rgba(229,9,20,0.2);
+        margin-bottom: 16px;
+        cursor: pointer;
+        animation: revealPop 0.4s ease;
+    }
+    @keyframes revealPop {
+        from { opacity: 0; transform: scale(0.92); }
+        to { opacity: 1; transform: scale(1); }
+    }
+    .otp-reveal .otp-label {
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        font-size: 0.72em;
+        margin-bottom: 10px;
+    }
+    .otp-reveal .otp-code {
+        font-family: var(--font-display);
+        font-size: 3.4em;
+        letter-spacing: 10px;
+        color: var(--gold);
+        text-shadow: 0 0 25px rgba(251,191,36,0.5);
+        line-height: 1;
+    }
+    .otp-reveal .otp-hint { color: var(--text-dim); font-size: 0.75em; margin-top: 10px; }
+
+    .toggle-full-btn {
+        width: 100%;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: var(--text-dim);
+        padding: 10px;
+        border-radius: 8px;
+        font-size: 0.85em;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+    }
+    .toggle-full-btn:hover { border-color: var(--red); color: var(--text); }
+
+    .full-body { margin-top: 14px; }
+
+    .message-box {
+        background: rgba(0,0,0,0.4);
+        border-left: 4px solid var(--red);
+        border-radius: 8px;
+        padding: 16px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-family: var(--font-body);
+        font-size: 1.05em;
+        font-weight: 700;
+        color: #f1f5f9;
+        line-height: 1.7;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .woven-link, .inline-link {
+        color: var(--gold);
+        text-decoration: underline;
+        font-weight: 800;
+        transition: color 0.2s;
+    }
+    .woven-link:hover, .inline-link:hover { color: #fcd34d; }
+
+    .modal-overlay {
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,0.75);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+        padding: 20px;
+    }
+    .modal-card {
+        background: var(--bg-panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 16px;
+        padding: 24px;
+        max-width: 440px;
+        width: 100%;
+        max-height: 85vh;
+        overflow-y: auto;
+        position: relative;
+    }
+    .modal-close {
+        position: absolute;
+        top: 14px; right: 14px;
+        background: transparent;
+        border: none;
+        color: var(--text-dim);
+        font-size: 1.4em;
+        cursor: pointer;
+    }
+    .btn-primary {
+        width: 100%;
+        padding: 12px;
+        border: none;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--red), var(--red-dark));
+        color: #fff;
+        font-weight: 700;
+        cursor: pointer;
+        margin-bottom: 10px;
+    }
+    .btn-danger { background: var(--danger); }
+    .input-group { margin-bottom: 14px; }
+    .input-group label { display: block; margin-bottom: 6px; color: var(--text-dim); font-size: 0.85em; font-weight: 600; }
+    .input-group input { letter-spacing: normal; text-align: left; font-weight: 400; margin-bottom: 0; }
+    .email-item {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+    }
+    .email-item .btn-danger { width: auto; padding: 8px 14px; margin: 0; }
+
+    footer { text-align: center; color: #6b7280; font-size: 0.7em; letter-spacing: 1px; margin: 30px 0 10px; }
+
+    @media (max-width: 720px) {
+        .hero { grid-template-columns: 1fr; }
+        .hero h1 { font-size: 2.2em; }
+        .verify-types { grid-template-columns: repeat(3, 1fr); }
+        .otp-reveal .otp-code { font-size: 2.6em; letter-spacing: 6px; }
+    }
+</style>
 </head>
 <body>
     <div class="container">
-        <div style="background: #22c55e; color: #000; text-align: center; padding: 14px; border-radius: 10px; margin-bottom: 20px; font-weight: 900; font-size: 1.2em;">
-            🟢 VERSION 4 — LINKS INLINE IN TEXT
+        <header>
+            <div class="logo">
+                <div class="logo-mark">L</div>
+                <div class="logo-text">LAGEND X <span>CODE</span></div>
+            </div>
+            <button class="admin-link" onclick="openAdmin()">⚙ Admin</button>
+        </header>
+
+        <div class="addr-bar">
+            <div class="addr-dots"><span></span><span></span><span></span></div>
+            <div class="addr-url" id="addrUrl">lagend-otp.onrender.com</div>
+            <div class="addr-tag">NOIR CLASSIC · NIGHT MODE READY</div>
         </div>
 
-        <header>
-            <h1>📧 OTP Email Fetcher</h1>
-            <p>View your emails - Simple & Fast</p>
-        </header>
-        
-        <div class="api-status" id="apiStatus">
-            <div class="dot"></div>
-            <span id="apiStatusText">Connecting...</span>
-        </div>
-        
-        <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('view')">👁️ View Emails</button>
-            <button class="tab-btn" onclick="switchTab('admin')">🔐 Admin</button>
-        </div>
-        
-        <!-- View Emails -->
-        <div id="view" class="tab-content active">
+        <div class="ticker">Stranger Things · Squid Game · Wednesday · Money Heist · Bridgerton · Dark · Arcane</div>
+
+        <div class="hero">
+            <div>
+                <div class="eyebrow">⚡ NETFLIX ACCESS TOOL</div>
+                <h1>GET YOUR NETFLIX<span class="accent">CODE &amp; LINK</span></h1>
+                <p>Fast lookup for sign-in codes and reset links. Clean, mobile-friendly — open it and get what you need in seconds.</p>
+            </div>
+
             <div class="card">
-                <h2>👁️ View Emails</h2>
-                <p style="color: #94a3b8; margin-bottom: 20px;">Enter your 6-digit code</p>
-                
-                <div class="input-group">
-                    <label>Your Code</label>
-                    <input type="text" id="viewCode" placeholder="e.g., 123456" maxlength="6">
+                <h2>Enter Netflix Mail</h2>
+                <div class="sub">Enter your 6-digit code to fetch instantly.</div>
+
+                <span class="field-label">Your 6-Digit Code</span>
+                <input type="text" id="viewCode" inputmode="numeric" placeholder="e.g. 123456" maxlength="6">
+
+                <div class="verify-label">Verification Type</div>
+                <div class="verify-types" id="verifyTypes">
+                    <button type="button" class="vtype" data-type="2fa"><span class="ic">🛡️</span><span>2FA Code</span></button>
+                    <button type="button" class="vtype" data-type="reset"><span class="ic">🔑</span><span>Reset Link</span></button>
+                    <button type="button" class="vtype" data-type="4digit"><span class="ic">🔢</span><span>4-Digit</span></button>
+                    <button type="button" class="vtype active" data-type="6digit"><span class="ic">🔟</span><span>6-Digit</span></button>
+                    <button type="button" class="vtype" data-type="household"><span class="ic">🏠</span><span>Household</span></button>
                 </div>
-                
-                <button class="btn btn-primary" onclick="getEmails()">🔍 Get Emails</button>
-                <div id="emailsResult"></div>
+
+                <button class="btn-continue" onclick="getEmails()">Continue →</button>
+                <div class="trust-line">🔒 Protected · Session-based · No password stored</div>
             </div>
         </div>
-        
-        <!-- Admin -->
-        <div id="admin" class="tab-content">
-            <div class="card">
-                <h2>🔐 Admin Panel</h2>
-                
-                <div id="adminLogin">
-                    <p style="color: #94a3b8; margin-bottom: 20px;">Enter password</p>
+
+        <div class="status-wrap">
+            <div class="api-status" id="apiStatus">
+                <div class="dot"></div>
+                <span id="apiStatusText">Connecting...</span>
+            </div>
+        </div>
+
+        <div id="emailsResult"></div>
+
+        <div class="ticker">All Of Us Are Dead · Outer Banks · You · Narcos · Ozark · Kaos · 1899</div>
+        <footer>🔒 HTTPS IN TRANSIT · SESSION-BASED · MADE BY LAGEND</footer>
+    </div>
+
+    <div class="modal-overlay" id="adminModal">
+        <div class="modal-card">
+            <button class="modal-close" onclick="closeAdmin()">×</button>
+
+            <div id="adminLogin">
+                <h2 style="margin-bottom:16px;">🔐 Admin</h2>
+                <div class="input-group">
+                    <label>Password</label>
+                    <input type="password" id="adminPassword" placeholder="••••••" onkeypress="if(event.key==='Enter') verifyAdmin()">
+                </div>
+                <button class="btn-primary" onclick="verifyAdmin()">Login</button>
+            </div>
+
+            <div id="adminPanel" style="display:none;">
+                <h2 style="margin-bottom:16px;">🔐 Admin</h2>
+                <div style="background: rgba(34,197,94,0.08); padding: 16px; border-radius: 10px; margin-bottom: 18px; border-left: 3px solid var(--success);">
+                    <div style="color: var(--success); font-weight:700; margin-bottom:10px;">➕ Add Email</div>
                     <div class="input-group">
-                        <label>Password</label>
-                        <input type="password" id="adminPassword" placeholder="••••••" onkeypress="if(event.key==='Enter') verifyAdmin()">
+                        <label>Email Address</label>
+                        <input type="email" id="adminEmail" placeholder="example@email.com">
                     </div>
-                    <button class="btn btn-primary" onclick="verifyAdmin()">🔓 Login</button>
+                    <button class="btn-primary" style="background: var(--success);" onclick="addEmail()">Add Email</button>
                 </div>
-                
-                <div id="adminPanel" style="display: none;">
-                    <div style="background: rgba(16, 185, 129, 0.1); padding: 20px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid var(--success);">
-                        <h3 style="color: var(--success); margin-bottom: 15px;">➕ Add Email</h3>
-                        <div class="input-group">
-                            <label>Email Address</label>
-                            <input type="email" id="adminEmail" placeholder="example@email.com">
-                        </div>
-                        <button class="btn btn-primary" onclick="addEmail()" style="background: var(--success);">Add Email</button>
-                    </div>
-                    
-                    <h3 style="color: var(--primary); margin-bottom: 15px;">📋 Your Emails</h3>
-                    <div id="adminEmailList"></div>
-                    
-                    <button class="btn btn-danger" onclick="logoutAdmin()">Logout</button>
-                </div>
+
+                <div id="adminEmailList"></div>
+                <button class="btn-primary btn-danger" onclick="logoutAdmin()">Logout</button>
             </div>
         </div>
     </div>
-    
+
     <script>
         let apiUrl = localStorage.getItem('apiUrl') || 'https://otp-email-fetcher.onrender.com/api';
-        
+        document.getElementById('addrUrl').textContent = window.location.hostname || 'lagend-otp.onrender.com';
+
         document.addEventListener('DOMContentLoaded', () => {
             checkApiStatus();
             setInterval(checkApiStatus, 5000);
         });
-        
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
-        }
-        
+
+        document.querySelectorAll('.vtype').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.vtype').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        function openAdmin() { document.getElementById('adminModal').style.display = 'flex'; }
+        function closeAdmin() { document.getElementById('adminModal').style.display = 'none'; }
+
         async function checkApiStatus() {
             try {
                 const response = await fetch(`${apiUrl}/health`);
                 if (response.ok) {
                     document.getElementById('apiStatus').className = 'api-status connected';
-                    document.getElementById('apiStatusText').textContent = '✅ Connected';
+                    document.getElementById('apiStatusText').textContent = 'Connected';
                 } else {
                     setDisconnected();
                 }
@@ -313,202 +538,42 @@
                 setDisconnected();
             }
         }
-        
+
         function setDisconnected() {
             document.getElementById('apiStatus').className = 'api-status disconnected';
-            document.getElementById('apiStatusText').textContent = '❌ Disconnected';
+            document.getElementById('apiStatusText').textContent = 'Disconnected';
         }
-        
-        async function getEmails() {
-            const code = document.getElementById('viewCode').value.trim();
-            if (!code) return showMessage('Enter code', 'error');
-            
-            try {
-                const response = await fetch(`${apiUrl}/messages/${code}`);
-                if (!response.ok) return showMessage('Invalid code', 'error');
-                
-                const data = await response.json();
-                const freshMessages = data.messages.slice(0, 3); // Only show top 3 freshest
 
-                let html = `<div class="message success" style="margin-top: 20px;">✅ ${freshMessages.length} fresh email(s) (last 1 hour)</div>`;
-                
-                freshMessages.forEach(msg => {
-                    const date = new Date(msg.timestamp).toLocaleString();
-                    html += `<div>
-                        <strong style="color: var(--primary);">${date}</strong>
-                        <div class="message-box">${renderMessageText(msg.text, msg.links)}</div>
-                    </div>`;
-                });
-                
-                document.getElementById('emailsResult').innerHTML = html;
-            } catch {
-                showMessage('Error', 'error');
+        function extractLikelyCode(text) {
+            const patterns = [
+                /code to (?:sign in|confirm|verify|continue)[^\d]{0,40}(\d{4,8})/i,
+                /sign[\s-]?in[^\d]{0,40}(\d{4,8})/i,
+                /verification code[^\d]{0,20}(\d{4,8})/i,
+                /\bcode\b[^\d]{0,20}(\d{4,8})/i,
+                /\b(\d{4,8})\b/
+            ];
+            for (const p of patterns) {
+                const m = text.match(p);
+                if (m) return m[1];
             }
-        }
-        
-        async function verifyAdmin() {
-            const password = document.getElementById('adminPassword').value;
-            try {
-                const response = await fetch(`${apiUrl}/admin/verify`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password })
-                });
-                
-                if (response.ok) {
-                    document.getElementById('adminLogin').style.display = 'none';
-                    document.getElementById('adminPanel').style.display = 'block';
-                    loadAdminEmails();
-                } else {
-                    showMessage('Invalid password', 'error');
-                }
-            } catch {
-                showMessage('Error', 'error');
-            }
-        }
-        
-        async function loadAdminEmails() {
-            try {
-                const response = await fetch(`${apiUrl}/emails`);
-                const emails = await response.json();
-                
-                let html = '';
-                emails.forEach(item => {
-                    html += `<div class="email-item">
-                        <div>
-                            <div style="color: var(--primary); font-weight: 600; margin-bottom: 5px;">${item.email}</div>
-                            <div style="color: var(--gray); font-size: 0.9em;">Code: ${item.code} | ${item.messages} messages</div>
-                        </div>
-                        <button class="btn btn-danger" onclick="deleteEmail('${item.email}')">Delete</button>
-                    </div>`;
-                });
-                
-                document.getElementById('adminEmailList').innerHTML = html || '<p>No emails</p>';
-            } catch {
-                showMessage('Error', 'error');
-            }
-        }
-        
-        async function addEmail() {
-            const email = document.getElementById('adminEmail').value.trim();
-            if (!email) return showMessage('Enter email', 'error');
-            
-            try {
-                const response = await fetch(`${apiUrl}/admin/add-email`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password: 'OSM77' })
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    showMessage(`✅ Added! Code: ${data.code}`, 'success');
-                    document.getElementById('adminEmail').value = '';
-                    loadAdminEmails();
-                } else {
-                    showMessage('Error', 'error');
-                }
-            } catch {
-                showMessage('Error', 'error');
-            }
-        }
-        
-        async function deleteEmail(email) {
-            if (!confirm(`Delete ${email}?`)) return;
-            
-            try {
-                const response = await fetch(`${apiUrl}/admin/delete-email/${email}`, {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password: 'OSM77' })
-                });
-                
-                if (response.ok) {
-                    showMessage('✅ Deleted', 'success');
-                    loadAdminEmails();
-                }
-            } catch {
-                showMessage('Error', 'error');
-            }
-        }
-        
-        function logoutAdmin() {
-            document.getElementById('adminLogin').style.display = 'block';
-            document.getElementById('adminPanel').style.display = 'none';
-            document.getElementById('adminPassword').value = '';
-        }
-        
-        function showMessage(text, type) {
-            const div = document.createElement('div');
-            div.className = `message ${type}`;
-            div.textContent = text;
-            document.querySelector('.tab-content.active .card').appendChild(div);
-            setTimeout(() => div.remove(), 3000);
-        }
-        
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+            return null;
         }
 
-        // Renders the raw message text with links woven in AT THEIR EXACT
-        // ORIGINAL POSITION - same as how Telegram itself displays them
-        // (e.g. "...Plans start at ₹149/month. Restart membership" where
-        // "Restart membership" is the clickable part). Uses the offset/length
-        // the bot recorded for each hidden hyperlink to splice in a real <a>
-        // tag right where that text sits, instead of listing links separately.
-        // Falls back to plain linkify() for any literal https:// text that
-        // isn't covered by a hyperlink entity. The underlying raw text is
-        // never changed - this only affects how it's displayed.
-        function renderMessageText(text, links) {
-            if (!links || links.length === 0) {
-                return linkify(escapeHtml(text));
-            }
-
-            // Sort by position so we can walk through the text left to right
-            const sorted = [...links].sort((a, b) => a.offset - b.offset);
-
-            let html = '';
-            let cursor = 0;
-
-            sorted.forEach(link => {
-                if (link.offset < cursor) return; // skip overlapping entities, just in case
-
-                // Plain text before this link - escape + linkify any bare URLs in it
-                const before = text.substring(cursor, link.offset);
-                html += linkify(escapeHtml(before));
-
-                // The link itself, using its real visible label
-                const safeUrl = escapeHtml(link.url);
-                const safeLabel = escapeHtml(link.text);
-                html += `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="woven-link">${safeLabel}</a>`;
-
-                cursor = link.offset + link.length;
-            });
-
-            // Any remaining text after the last link
-            html += linkify(escapeHtml(text.substring(cursor)));
-
-            return html;
+        function toggleFull(id) {
+            const el = document.getElementById(id);
+            const arrow = document.getElementById(id + '-arrow');
+            const isHidden = el.style.display === 'none';
+            el.style.display = isHidden ? 'block' : 'none';
+            arrow.textContent = isHidden ? '▴' : '▾';
         }
 
-        // Turns URLs inside already-escaped text into clickable links.
-        // Runs AFTER escapeHtml, so it only ever matches plain text URLs -
-        // it never touches or reconstructs the underlying raw message.
-        function linkify(escapedText) {
-            const urlPattern = /(https?:\/\/[^\s<>"']+)/g;
-            return escapedText.replace(urlPattern, (url) => {
-                // Trim common trailing punctuation that isn't part of the URL
-                let trailing = '';
-                const trailingMatch = url.match(/[.,!?;:)\]]+$/);
-                if (trailingMatch) {
-                    trailing = trailingMatch[0];
-                    url = url.slice(0, -trailing.length);
-                }
-                return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="inline-link">${url}</a>${trailing}`;
-            });
-        }
-    </script>
-</body>
-</html>
+        function renderResultCard(msg, index) {
+            const date = new Date(msg.timestamp).toLocaleString();
+            const code = extractLikelyCode(msg.text);
+            const bodyId = `msg-body-${index}`;
+
+            let html = `<div class="result-card">`;
+            html += `<div class="result-date">${date}</div>`;
+
+            if (code) {
+                html += `<div class="otp-reveal" onclick="copyToClipboard('${code}')">
