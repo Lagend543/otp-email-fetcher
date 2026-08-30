@@ -468,6 +468,7 @@
                 <div class="dot"></div>
                 <span id="apiStatusText">Connecting...</span>
             </div>
+            <div id="debugInfo" style="color:#6b7280; font-size:0.7em; margin-top:6px;"></div>
         </div>
 
         <div id="emailsResult"></div>
@@ -538,6 +539,7 @@
         function closeAdmin() { document.getElementById('adminModal').style.display = 'none'; }
 
         async function checkApiStatus() {
+            const debugEl = document.getElementById('debugInfo');
             try {
                 // Hard 15-second timeout - a request should never be allowed
                 // to hang forever with no feedback, even on a slow cold start.
@@ -550,27 +552,19 @@
                 if (response.ok) {
                     document.getElementById('apiStatus').className = 'api-status connected';
                     document.getElementById('apiStatusText').textContent = 'Connected';
+                    if (debugEl) debugEl.textContent = '';
                 } else {
                     setDisconnected();
+                    if (debugEl) debugEl.textContent = `HTTP ${response.status} from server`;
                 }
-            } catch {
+            } catch (err) {
                 setDisconnected();
+                // Show the REAL browser error on screen so we're not
+                // guessing blind - CORS blocks, timeouts, and DNS failures
+                // all show different messages here.
+                if (debugEl) debugEl.textContent = `Error: ${err.name} — ${err.message}`;
             }
         }
 
         function setDisconnected() {
-            document.getElementById('apiStatus').className = 'api-status disconnected';
-            document.getElementById('apiStatusText').textContent = 'Disconnected';
-        }
-
-        function extractLikelyCode(text) {
-            const patterns = [
-                /code to (?:sign in|confirm|verify|continue)[^\d]{0,40}(\d{4,8})/i,
-                /sign[\s-]?in[^\d]{0,40}(\d{4,8})/i,
-                /verification code[^\d]{0,20}(\d{4,8})/i,
-                /\bcode\b[^\d]{0,20}(\d{4,8})/i,
-                /\b(\d{4,8})\b/
-            ];
-            for (const p of patterns) {
-                const m = text.match(p);
-                                                                                     
+            documen
