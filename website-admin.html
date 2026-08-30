@@ -136,13 +136,26 @@
             margin: 15px 0;
             white-space: pre-wrap;
             word-break: break-word;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
-            line-height: 1.6;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 1.15em;
+            font-weight: 700;
+            color: #f1f5f9;
+            line-height: 1.7;
             max-height: 400px;
             overflow-y: auto;
         }
         
+        .inline-link {
+            color: #fbbf24;
+            text-decoration: underline;
+            word-break: break-all;
+            transition: color 0.2s;
+        }
+
+        .inline-link:hover {
+            color: #fcd34d;
+        }
+
         .email-item {
             background: rgba(15, 23, 42, 0.6);
             border: 1px solid rgba(99, 102, 241, 0.2);
@@ -298,14 +311,15 @@
                 if (!response.ok) return showMessage('Invalid code', 'error');
                 
                 const data = await response.json();
+                const freshMessages = data.messages.slice(0, 3); // Only show top 3 freshest
+
+                let html = `<div class="message success" style="margin-top: 20px;">✅ ${freshMessages.length} fresh email(s) (last 1 hour)</div>`;
                 
-                let html = `<div class="message success" style="margin-top: 20px;">✅ Found ${data.messageCount} message(s)</div>`;
-                
-                data.messages.forEach(msg => {
+                freshMessages.forEach(msg => {
                     const date = new Date(msg.timestamp).toLocaleString();
                     html += `<div>
                         <strong style="color: var(--primary);">${date}</strong>
-                        <div class="message-box">${escapeHtml(msg.text)}</div>
+                        <div class="message-box">${linkify(escapeHtml(msg.text))}</div>
                     </div>`;
                 });
                 
@@ -420,7 +434,23 @@
             div.textContent = text;
             return div.innerHTML;
         }
+
+        // Turns URLs inside already-escaped text into clickable links.
+        // Runs AFTER escapeHtml, so it only ever matches plain text URLs -
+        // it never touches or reconstructs the underlying raw message.
+        function linkify(escapedText) {
+            const urlPattern = /(https?:\/\/[^\s<>"']+)/g;
+            return escapedText.replace(urlPattern, (url) => {
+                // Trim common trailing punctuation that isn't part of the URL
+                let trailing = '';
+                const trailingMatch = url.match(/[.,!?;:)\]]+$/);
+                if (trailingMatch) {
+                    trailing = trailingMatch[0];
+                    url = url.slice(0, -trailing.length);
+                }
+                return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="inline-link">${url}</a>${trailing}`;
+            });
+        }
     </script>
 </body>
-    </html>
-    
+</html>
