@@ -34,8 +34,8 @@ function generateCode() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// Initialize bot with polling
-const bot = new TelegramBot(BOT_TOKEN, { polling: true });
+// Initialize bot WITHOUT auto-polling first, so we can clear any webhook/conflicts
+const bot = new TelegramBot(BOT_TOKEN, { polling: false });
 
 console.log(`
 ╔════════════════════════════════════════╗
@@ -47,19 +47,33 @@ Group ID: ${GROUP_ID}
 Admin Password: ${ADMIN_PASSWORD}
 `);
 
-// Start polling explicitly
-bot.startPolling({
-  allowed_updates: ['message'],
-  polling: {
-    interval: 300,
-    autoStart: true,
-    params: {
-      timeout: 10
-    }
+// Clear any leftover webhook and drop pending updates before polling.
+// This prevents 409 Conflict errors caused by a stale webhook or a
+// leftover polling session from a previous deploy.
+async function startBotSafely() {
+  try {
+    await bot.deleteWebHook({ drop_pending_updates: true });
+    console.log('✅ Cleared any existing webhook');
+  } catch (err) {
+    console.log('⚠️ Could not clear webhook (may not have existed):', err.message);
   }
-});
 
-console.log('✅ Bot polling started!');
+  // Small delay to let Telegram fully release the previous connection
+  await new Promise(resolve => setTimeout(resolve, 2000));
+
+  bot.startPolling({
+    restart: true,
+    polling: {
+      interval: 300,
+      autoStart: true,
+      params: { timeout: 10 }
+    }
+  });
+
+  console.log('✅ Bot polling started!');
+}
+
+startBotSafely();
 
 // Listen for messages
 bot.on('message', (msg) => {
@@ -235,4 +249,4 @@ process.on('SIGTERM', () => {
   bot.stopPolling();
   process.exit(0);
 });
-       
+  
