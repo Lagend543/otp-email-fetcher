@@ -39,8 +39,8 @@ const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
 console.log(`
 ╔════════════════════════════════════════╗
-║   OTP Email Fetcher - SMART LINKS      ║
-║   Bot Starting...                      ║
+║   OTP Email Fetcher - SIMPLE VERSION   ║
+║   Just stores full email text          ║
 ╚════════════════════════════════════════╝
 Bot Token: ${BOT_TOKEN.slice(0, 20)}...
 Group ID: ${GROUP_ID}
@@ -68,18 +68,8 @@ bot.on('message', (msg) => {
     return;
   }
 
-  // Get text from various message types
+  // Get text from any message type
   let text = msg.text || msg.caption || '';
-  
-  // Handle forwarded messages
-  if (msg.forward_from_chat) {
-    text = msg.text || msg.caption || '';
-  }
-  
-  // Handle quoted/reply messages
-  if (msg.reply_to_message) {
-    text = msg.text || msg.caption || text;
-  }
   
   if (!text || text.trim().length === 0) {
     return;
@@ -87,138 +77,48 @@ bot.on('message', (msg) => {
 
   const timestamp = new Date().toISOString();
   
-  console.log(`\n📨 NEW MESSAGE RECEIVED:`);
-  console.log(`   From: ${msg.chat.title || msg.chat.id}`);
-  console.log(`   Text: ${text.substring(0, 80)}...`);
+  console.log(`\n📨 NEW MESSAGE FROM GROUP:`);
+  console.log(`   Text length: ${text.length} chars`);
+  console.log(`   Preview: ${text.substring(0, 100)}...`);
   
-  // Extract emails - handle both [email] and plain email formats
-  const emailRegex = /\[?([a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\]?/g;
-  let emails = [];
-  let match;
-  while ((match = emailRegex.exec(text)) !== null) {
-    emails.push(match[1]);
-  }
-  // Remove duplicates
-  emails = [...new Set(emails)];
+  // Load stored emails to check
+  loadData();
   
-  // Extract codes (4-10 digits, prioritize codes after "code:" text)
-  let codes = [];
+  // Check if this message contains any of our tracked emails
+  let foundEmails = [];
   
-  // First try to find codes explicitly mentioned with "code:" prefix
-  const codeWithLabel = /code[:\s]+(\d{4,10})/gi;
-  let codeMatch;
-  while ((codeMatch = codeWithLabel.exec(text)) !== null) {
-    codes.push(codeMatch[1]);
-  }
-  
-  // If no codes found, look for standalone numbers
-  if (codes.length === 0) {
-    const codeRegex = /\b(\d{4,10})\b/g;
-    while ((codeMatch = codeRegex.exec(text)) !== null) {
-      codes.push(codeMatch[1]);
+  for (let email of Object.keys(emailsData.emails)) {
+    // Simple check: does message contain the email address?
+    if (text.includes(email)) {
+      foundEmails.push(email);
+      console.log(`\n✅ FOUND TRACKED EMAIL: ${email}`);
     }
   }
-  
-  // Remove duplicates
-  codes = [...new Set(codes)];
-  
-  // Extract links WITH their surrounding text context (SMART!)
-  let linksWithText = [];
-  
-  // Split by links and capture surrounding text
-  const lines = text.split('\n');
-  const processedLinks = new Set();
-  
-  lines.forEach(line => {
-    // Find all URLs in this line
-    const urlPattern = /(https?:\/\/[^\s<>"{}|\\^`\[\]]*)/g;
-    let urlMatch;
-    
-    while ((urlMatch = urlPattern.exec(line)) !== null) {
-      const url = urlMatch[1];
-      const startIdx = urlMatch.index;
-      
-      // Get text before URL (up to 60 chars)
-      const beforeStart = Math.max(0, startIdx - 60);
-      let textBefore = line.substring(beforeStart, startIdx).trim();
-      // Get last sentence/phrase
-      textBefore = textBefore.split(/[.!?]/).pop().trim();
-      
-      // Get text after URL (up to 60 chars)
-      const endIdx = urlMatch.index + url.length;
-      let textAfter = line.substring(endIdx, Math.min(line.length, endIdx + 60)).trim();
-      // Get first sentence/phrase
-      textAfter = textAfter.split(/[.!?]/)[0].trim();
-      
-      // Choose display text (prefer text before)
-      let displayText = 'Link';
-      
-      if (textBefore && textBefore.length > 3 && textBefore.length < 60) {
-        displayText = textBefore;
-      } else if (textAfter && textAfter.length > 3 && textAfter.length < 60) {
-        displayText = textAfter;
-      } else {
-        // Try to use domain as fallback
-        try {
-          const domain = new URL(url).hostname.replace('www.', '');
-          displayText = domain.length < 30 ? domain : 'Open Link';
-        } catch (e) {
-          displayText = 'Open Link';
-        }
-      }
-      
-      // Avoid duplicates
-      if (!processedLinks.has(url)) {
-        linksWithText.push({
-          url: url,
-          text: displayText.substring(0, 60)  // Limit display text
-        });
-        processedLinks.add(url);
-      }
-    }
-  });
-  
-  console.log(`📧 Extracted - Emails: ${emails.length}, Codes: ${codes.length}, Links: ${linksWithText.length}`);
-  
-  if (emails.length > 0) {
-    console.log(`✅ FOUND ${emails.length} EMAIL(S): ${emails.join(', ')}`);
-    console.log(`✅ FOUND ${codes.length} CODE(S): ${codes.join(', ')}`);
-    if (linksWithText.length > 0) {
-      linksWithText.forEach(link => {
-        console.log(`   🔗 LINK: "${link.text}" → ${link.url.substring(0, 50)}...`);
-      });
-    }
-    
-    emails.forEach(email => {
-      // Create if new
-      if (!emailsData.emails[email]) {
-        const newCode = generateCode();
-        emailsData.emails[email] = {
-          code: newCode,
-          messages: [],
-          created: timestamp
-        };
-        console.log(`   ➕ NEW EMAIL: ${email}`);
-        console.log(`   🔐 CODE: ${newCode}`);
-      }
 
-      // Add message with links
+  // If we found any tracked emails, store the FULL message
+  if (foundEmails.length > 0) {
+    console.log(`📧 Storing FULL email text for: ${foundEmails.join(', ')}`);
+    
+    foundEmails.forEach(email => {
+      // Store complete message as-is
       emailsData.emails[email].messages.unshift({
         id: msg.message_id,
-        text: text,
-        timestamp: timestamp,
-        codes: codes,
-        links: linksWithText  // Store with display text
+        text: text,  // FULL TEXT - no parsing!
+        timestamp: timestamp
       });
 
-      // Keep last 50 messages
+      // Keep last 50 messages per email
       if (emailsData.emails[email].messages.length > 50) {
         emailsData.emails[email].messages = emailsData.emails[email].messages.slice(0, 50);
       }
+      
+      console.log(`   Stored message for ${email} (total: ${emailsData.emails[email].messages.length})`);
     });
 
     saveData();
     console.log(`✅ DATA SAVED!\n`);
+  } else {
+    console.log(`ℹ️ No tracked emails found in this message\n`);
   }
 });
 
@@ -256,6 +156,7 @@ app.get('/api/messages/:code', (req, res) => {
   res.json({
     email,
     code,
+    messageCount: emailsData.emails[email].messages.length,
     messages: emailsData.emails[email].messages
   });
 });
@@ -282,6 +183,9 @@ app.post('/api/admin/add-email', (req, res) => {
   const code = generateCode();
   emailsData.emails[email] = { code, messages: [], created: new Date().toISOString() };
   saveData();
+  
+  console.log(`\n✅ ADMIN: Added email ${email} with code ${code}`);
+  
   res.json({ success: true, email, code });
 });
 
@@ -293,6 +197,9 @@ app.delete('/api/admin/delete-email/:email', (req, res) => {
   
   delete emailsData.emails[req.params.email];
   saveData();
+  
+  console.log(`\n✅ ADMIN: Deleted email ${req.params.email}`);
+  
   res.json({ success: true });
 });
 
@@ -309,7 +216,7 @@ app.post('/api/admin/verify', (req, res) => {
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'running',
-    mode: 'polling',
+    mode: 'simple-full-text',
     emails: Object.keys(emailsData.emails).length
   });
 });
@@ -317,8 +224,7 @@ app.get('/api/health', (req, res) => {
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n🌐 API Server running on port ${PORT}`);
-  console.log(`📍 URL: http://0.0.0.0:${PORT}`);
-  console.log(`✅ Ready to receive messages!\n`);
+  console.log(`✅ Ready!\n`);
 });
 
 loadData();
@@ -329,4 +235,3 @@ process.on('SIGTERM', () => {
   bot.stopPolling();
   process.exit(0);
 });
-                   
