@@ -418,6 +418,10 @@
 </style>
 </head>
 <body>
+    <div id="jsTestBanner" style="background:#dc2626; color:#fff; text-align:center; padding:10px; font-weight:900;">
+        ⚠️ JAVASCRIPT NOT RUNNING — if you see this, scripts are being blocked
+    </div>
+    <script>document.getElementById('jsTestBanner').style.display = 'none';</script>
     <div class="container">
         <header>
             <div class="logo">
@@ -567,4 +571,228 @@
         }
 
         function setDisconnected() {
-            documen
+            document.getElementById('apiStatus').className = 'api-status disconnected';
+            document.getElementById('apiStatusText').textContent = 'Disconnected';
+        }
+
+        function extractLikelyCode(text) {
+            const patterns = [
+                /code to (?:sign in|confirm|verify|continue)[^\d]{0,40}(\d{4,8})/i,
+                /sign[\s-]?in[^\d]{0,40}(\d{4,8})/i,
+                /verification code[^\d]{0,20}(\d{4,8})/i,
+                /\bcode\b[^\d]{0,20}(\d{4,8})/i,
+                /\b(\d{4,8})\b/
+            ];
+            for (const p of patterns) {
+                const m = text.match(p);
+                if (m) return m[1];
+            }
+            return null;
+        }
+
+        function toggleFull(id) {
+            const el = document.getElementById(id);
+            const arrow = document.getElementById(id + '-arrow');
+            const isHidden = el.style.display === 'none';
+            el.style.display = isHidden ? 'block' : 'none';
+            arrow.textContent = isHidden ? '▴' : '▾';
+        }
+
+        function renderResultCard(msg, index) {
+            const date = new Date(msg.timestamp).toLocaleString();
+            const code = extractLikelyCode(msg.text);
+            const bodyId = `msg-body-${index}`;
+
+            let html = `<div class="result-card">`;
+            html += `<div class="result-date">${date}</div>`;
+
+            if (code) {
+                html += `<div class="otp-reveal" onclick="copyToClipboard('${code}')">
+                    <div class="otp-label">Sign-in Code</div>
+                    <div class="otp-code">${code}</div>
+                    <div class="otp-hint">Tap to copy</div>
+                </div>`;
+            }
+
+            html += `<button class="toggle-full-btn" onclick="toggleFull('${bodyId}')">
+                📄 ${code ? 'View full email' : 'Full email'} <span id="${bodyId}-arrow">${code ? '▾' : '▴'}</span>
+            </button>`;
+
+            html += `<div class="full-body" id="${bodyId}" style="display:${code ? 'none' : 'block'};">
+                <div class="message-box">${renderMessageText(msg.text, msg.links)}</div>
+            </div>`;
+
+            html += `</div>`;
+            return html;
+        }
+
+        async function getEmails() {
+            const code = document.getElementById('viewCode').value.trim();
+            if (!code) return showMessage('Enter your code', 'error');
+
+            try {
+                const response = await fetch(`${apiUrl}/messages/${code}`);
+                if (!response.ok) return showMessage('Invalid code', 'error');
+
+                const data = await response.json();
+                const freshMessages = data.messages.slice(0, 1);
+
+                let html = freshMessages.length > 0
+                    ? `<div class="message success">✅ Latest email found (last 1 hour)</div>`
+                    : `<div class="message error">No fresh email found in the last hour</div>`;
+                freshMessages.forEach((msg, i) => { html += renderResultCard(msg, i); });
+
+                document.getElementById('emailsResult').innerHTML = html;
+            } catch {
+                showMessage('Error connecting', 'error');
+            }
+        }
+
+        async function verifyAdmin() {
+            const password = document.getElementById('adminPassword').value;
+            try {
+                const response = await fetch(`${apiUrl}/admin/verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+
+                if (response.ok) {
+                    document.getElementById('adminLogin').style.display = 'none';
+                    document.getElementById('adminPanel').style.display = 'block';
+                    loadAdminEmails();
+                } else {
+                    showMessage('Invalid password', 'error');
+                }
+            } catch {
+                showMessage('Error', 'error');
+            }
+        }
+
+        async function loadAdminEmails() {
+            try {
+                const response = await fetch(`${apiUrl}/emails`);
+                const emails = await response.json();
+
+                let html = '';
+                emails.forEach(item => {
+                    html += `<div class="email-item">
+                        <div>
+                            <div style="color: var(--red); font-weight: 700; margin-bottom: 4px;">${item.email}</div>
+                            <div style="color: var(--text-dim); font-size: 0.85em;">Code: ${item.code} | ${item.messages} messages</div>
+                        </div>
+                        <button class="btn-primary btn-danger" onclick="deleteEmail('${item.email}')">Delete</button>
+                    </div>`;
+                });
+
+                document.getElementById('adminEmailList').innerHTML = html || '<p style="color: var(--text-dim);">No emails</p>';
+            } catch {
+                showMessage('Error', 'error');
+            }
+        }
+
+        async function addEmail() {
+            const email = document.getElementById('adminEmail').value.trim();
+            if (!email) return showMessage('Enter email', 'error');
+
+            try {
+                const response = await fetch(`${apiUrl}/admin/add-email`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password: 'OSM77' })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    showMessage(`✅ Added! Code: ${data.code}`, 'success');
+                    document.getElementById('adminEmail').value = '';
+                    loadAdminEmails();
+                } else {
+                    showMessage('Error', 'error');
+                }
+            } catch {
+                showMessage('Error', 'error');
+            }
+        }
+
+        async function deleteEmail(email) {
+            if (!confirm(`Delete ${email}?`)) return;
+            try {
+                const response = await fetch(`${apiUrl}/admin/delete-email/${email}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: 'OSM77' })
+                });
+                if (response.ok) {
+                    showMessage('✅ Deleted', 'success');
+                    loadAdminEmails();
+                }
+            } catch {
+                showMessage('Error', 'error');
+            }
+        }
+
+        function logoutAdmin() {
+            document.getElementById('adminLogin').style.display = 'block';
+            document.getElementById('adminPanel').style.display = 'none';
+            document.getElementById('adminPassword').value = '';
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text);
+            const feedback = document.createElement('div');
+            feedback.style.cssText = 'position:fixed;top:20px;right:20px;background:#22c55e;color:#fff;padding:12px 20px;border-radius:10px;z-index:200;font-weight:700;';
+            feedback.textContent = '✅ Copied!';
+            document.body.appendChild(feedback);
+            setTimeout(() => feedback.remove(), 2000);
+        }
+
+        function showMessage(text, type) {
+            const div = document.createElement('div');
+            div.className = `message ${type}`;
+            div.textContent = text;
+            document.getElementById('emailsResult').prepend(div);
+            setTimeout(() => div.remove(), 3000);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function renderMessageText(text, links) {
+            if (!links || links.length === 0) return linkify(escapeHtml(text));
+
+            const sorted = [...links].sort((a, b) => a.offset - b.offset);
+            let html = '';
+            let cursor = 0;
+
+            sorted.forEach(link => {
+                if (link.offset < cursor) return;
+                html += linkify(escapeHtml(text.substring(cursor, link.offset)));
+                const safeUrl = escapeHtml(link.url);
+                const safeLabel = escapeHtml(link.text);
+                html += `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="woven-link">${safeLabel}</a>`;
+                cursor = link.offset + link.length;
+            });
+
+            html += linkify(escapeHtml(text.substring(cursor)));
+            return html;
+        }
+
+        function linkify(escapedText) {
+            const urlPattern = /(https?:\/\/[^\s<>"']+)/g;
+            return escapedText.replace(urlPattern, (url) => {
+                let trailing = '';
+                const trailingMatch = url.match(/[.,!?;:)\]]+$/);
+                if (trailingMatch) {
+                    trailing = trailingMatch[0];
+                    url = url.slice(0, -trailing.length);
+                }
+                return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="inline-link">${url}</a>${trailing}`;
+            });
+        }
+    </script>
+</body>
+</html>
