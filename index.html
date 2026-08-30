@@ -197,7 +197,7 @@
 
     .verify-types {
         display: grid;
-        grid-template-columns: repeat(5, 1fr);
+        grid-template-columns: repeat(4, 1fr);
         gap: 6px;
         margin-bottom: 22px;
     }
@@ -254,7 +254,6 @@
 
     .status-wrap { text-align: center; }
 
-    #emailsResult { margin-top: 26px; }
 
     .message {
         padding: 12px 16px;
@@ -306,6 +305,50 @@
         line-height: 1;
     }
     .otp-reveal .otp-hint { color: var(--text-dim); font-size: 0.75em; margin-top: 10px; }
+
+    /* Reveal card for link-based types (Reset Link, Household) - same
+       card language as the OTP reveal, but shows a CLICK ME button
+       instead of a code, pointing at the real hyperlink from the email. */
+    .link-reveal {
+        text-align: center;
+        padding: 26px 16px;
+        border-radius: 14px;
+        background: linear-gradient(145deg, rgba(229,9,20,0.14), rgba(0,0,0,0.35));
+        border: 1px solid var(--red);
+        box-shadow: 0 0 40px rgba(229,9,20,0.2);
+        margin-bottom: 16px;
+        animation: revealPop 0.4s ease;
+    }
+    .link-reveal .link-heading {
+        font-family: var(--font-display);
+        font-size: 1.6em;
+        letter-spacing: 1px;
+        color: var(--text);
+        margin-bottom: 18px;
+    }
+    .click-me-btn {
+        display: inline-block;
+        padding: 14px 40px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--red), var(--red-dark));
+        color: #fff;
+        text-decoration: none;
+        font-weight: 800;
+        font-size: 1.05em;
+        letter-spacing: 1px;
+        box-shadow: 0 10px 25px rgba(229,9,20,0.35);
+    }
+
+    .no-match-note {
+        text-align: center;
+        color: var(--text-dim);
+        font-size: 0.85em;
+        padding: 16px;
+        margin-bottom: 16px;
+        background: rgba(255,255,255,0.03);
+        border-radius: 10px;
+        border: 1px dashed rgba(255,255,255,0.15);
+    }
 
     .toggle-full-btn {
         width: 100%;
@@ -412,7 +455,7 @@
     @media (max-width: 720px) {
         .hero { grid-template-columns: 1fr; }
         .hero h1 { font-size: 2.2em; }
-        .verify-types { grid-template-columns: repeat(3, 1fr); }
+        .verify-types { grid-template-columns: repeat(2, 1fr); }
         .otp-reveal .otp-code { font-size: 2.6em; letter-spacing: 6px; }
     }
 </style>
@@ -455,10 +498,9 @@
 
                 <div class="verify-label">Verification Type</div>
                 <div class="verify-types" id="verifyTypes">
+                    <button type="button" class="vtype active" data-type="signcode"><span class="ic">🔢</span><span>Sign-Code</span></button>
                     <button type="button" class="vtype" data-type="2fa"><span class="ic">🛡️</span><span>2FA Code</span></button>
                     <button type="button" class="vtype" data-type="reset"><span class="ic">🔑</span><span>Reset Link</span></button>
-                    <button type="button" class="vtype" data-type="4digit"><span class="ic">🔢</span><span>4-Digit</span></button>
-                    <button type="button" class="vtype active" data-type="6digit"><span class="ic">🔟</span><span>6-Digit</span></button>
                     <button type="button" class="vtype" data-type="household"><span class="ic">🏠</span><span>Household</span></button>
                 </div>
 
@@ -475,10 +517,16 @@
             <div id="debugInfo" style="color:#6b7280; font-size:0.7em; margin-top:6px;"></div>
         </div>
 
-        <div id="emailsResult"></div>
-
         <div class="ticker">All Of Us Are Dead · Outer Banks · You · Narcos · Ozark · Kaos · 1899</div>
         <footer>🔒 HTTPS IN TRANSIT · SESSION-BASED · MADE BY LAGEND</footer>
+    </div>
+
+    <!-- Result Modal - pops out immediately after Continue, no scrolling needed -->
+    <div class="modal-overlay" id="resultModal">
+        <div class="modal-card">
+            <button class="modal-close" onclick="closeResultModal()">×</button>
+            <div id="resultModalBody"></div>
+        </div>
     </div>
 
     <div class="modal-overlay" id="adminModal">
@@ -513,6 +561,7 @@
 
     <script>
         let apiUrl = localStorage.getItem('apiUrl') || 'https://otp-email-fetcher.onrender.com/api';
+        let selectedVerifyType = 'signcode'; // matches the default-active button
 
         // Defensive: this shouldn't fail, but if it ever does, it must not
         // block the connection check below from running.
@@ -527,272 +576,8 @@
                 btn.addEventListener('click', () => {
                     document.querySelectorAll('.vtype').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
+                    selectedVerifyType = btn.dataset.type;
                 });
             });
         } catch (e) {
-            console.error('vtype setup failed', e);
-        }
-
-        // Start checking connection status right away - don't wait on
-        // DOMContentLoaded (script already runs at the end of <body>, so
-        // the DOM is ready) and don't let anything above block this.
-        checkApiStatus();
-        setInterval(checkApiStatus, 5000);
-
-        function openAdmin() { document.getElementById('adminModal').style.display = 'flex'; }
-        function closeAdmin() { document.getElementById('adminModal').style.display = 'none'; }
-
-        async function checkApiStatus() {
-            const debugEl = document.getElementById('debugInfo');
-            try {
-                // Hard 15-second timeout - a request should never be allowed
-                // to hang forever with no feedback, even on a slow cold start.
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-                const response = await fetch(`${apiUrl}/health`, { signal: controller.signal });
-                clearTimeout(timeoutId);
-
-                if (response.ok) {
-                    document.getElementById('apiStatus').className = 'api-status connected';
-                    document.getElementById('apiStatusText').textContent = 'Connected';
-                    if (debugEl) debugEl.textContent = '';
-                } else {
-                    setDisconnected();
-                    if (debugEl) debugEl.textContent = `HTTP ${response.status} from server`;
-                }
-            } catch (err) {
-                setDisconnected();
-                // Show the REAL browser error on screen so we're not
-                // guessing blind - CORS blocks, timeouts, and DNS failures
-                // all show different messages here.
-                if (debugEl) debugEl.textContent = `Error: ${err.name} — ${err.message}`;
-            }
-        }
-
-        function setDisconnected() {
-            document.getElementById('apiStatus').className = 'api-status disconnected';
-            document.getElementById('apiStatusText').textContent = 'Disconnected';
-        }
-
-        function extractLikelyCode(text) {
-            const patterns = [
-                /code to (?:sign in|confirm|verify|continue)[^\d]{0,40}(\d{4,8})/i,
-                /sign[\s-]?in[^\d]{0,40}(\d{4,8})/i,
-                /verification code[^\d]{0,20}(\d{4,8})/i,
-                /\bcode\b[^\d]{0,20}(\d{4,8})/i,
-                /\b(\d{4,8})\b/
-            ];
-            for (const p of patterns) {
-                const m = text.match(p);
-                if (m) return m[1];
-            }
-            return null;
-        }
-
-        function toggleFull(id) {
-            const el = document.getElementById(id);
-            const arrow = document.getElementById(id + '-arrow');
-            const isHidden = el.style.display === 'none';
-            el.style.display = isHidden ? 'block' : 'none';
-            arrow.textContent = isHidden ? '▴' : '▾';
-        }
-
-        function renderResultCard(msg, index) {
-            const date = new Date(msg.timestamp).toLocaleString();
-            const code = extractLikelyCode(msg.text);
-            const bodyId = `msg-body-${index}`;
-
-            let html = `<div class="result-card">`;
-            html += `<div class="result-date">${date}</div>`;
-
-            if (code) {
-                html += `<div class="otp-reveal" onclick="copyToClipboard('${code}')">
-                    <div class="otp-label">Sign-in Code</div>
-                    <div class="otp-code">${code}</div>
-                    <div class="otp-hint">Tap to copy</div>
-                </div>`;
-            }
-
-            html += `<button class="toggle-full-btn" onclick="toggleFull('${bodyId}')">
-                📄 ${code ? 'View full email' : 'Full email'} <span id="${bodyId}-arrow">${code ? '▾' : '▴'}</span>
-            </button>`;
-
-            html += `<div class="full-body" id="${bodyId}" style="display:${code ? 'none' : 'block'};">
-                <div class="message-box">${renderMessageText(msg.text, msg.links)}</div>
-            </div>`;
-
-            html += `</div>`;
-            return html;
-        }
-
-        async function getEmails() {
-            const code = document.getElementById('viewCode').value.trim();
-            if (!code) return showMessage('Enter your code', 'error');
-
-            try {
-                const response = await fetch(`${apiUrl}/messages/${code}`);
-                if (!response.ok) return showMessage('Invalid code', 'error');
-
-                const data = await response.json();
-                const freshMessages = data.messages.slice(0, 1);
-
-                let html = freshMessages.length > 0
-                    ? `<div class="message success">✅ Latest email found (last 1 hour)</div>`
-                    : `<div class="message error">No fresh email found in the last hour</div>`;
-                freshMessages.forEach((msg, i) => { html += renderResultCard(msg, i); });
-
-                document.getElementById('emailsResult').innerHTML = html;
-            } catch {
-                showMessage('Error connecting', 'error');
-            }
-        }
-
-        async function verifyAdmin() {
-            const password = document.getElementById('adminPassword').value;
-            try {
-                const response = await fetch(`${apiUrl}/admin/verify`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password })
-                });
-
-                if (response.ok) {
-                    document.getElementById('adminLogin').style.display = 'none';
-                    document.getElementById('adminPanel').style.display = 'block';
-                    loadAdminEmails();
-                } else {
-                    showMessage('Invalid password', 'error');
-                }
-            } catch {
-                showMessage('Error', 'error');
-            }
-        }
-
-        async function loadAdminEmails() {
-            try {
-                const response = await fetch(`${apiUrl}/emails`);
-                const emails = await response.json();
-
-                let html = '';
-                emails.forEach(item => {
-                    html += `<div class="email-item">
-                        <div>
-                            <div style="color: var(--red); font-weight: 700; margin-bottom: 4px;">${item.email}</div>
-                            <div style="color: var(--text-dim); font-size: 0.85em;">Code: ${item.code} | ${item.messages} messages</div>
-                        </div>
-                        <button class="btn-primary btn-danger" onclick="deleteEmail('${item.email}')">Delete</button>
-                    </div>`;
-                });
-
-                document.getElementById('adminEmailList').innerHTML = html || '<p style="color: var(--text-dim);">No emails</p>';
-            } catch {
-                showMessage('Error', 'error');
-            }
-        }
-
-        async function addEmail() {
-            const email = document.getElementById('adminEmail').value.trim();
-            if (!email) return showMessage('Enter email', 'error');
-
-            try {
-                const response = await fetch(`${apiUrl}/admin/add-email`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password: 'OSM77' })
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    showMessage(`✅ Added! Code: ${data.code}`, 'success');
-                    document.getElementById('adminEmail').value = '';
-                    loadAdminEmails();
-                } else {
-                    showMessage('Error', 'error');
-                }
-            } catch {
-                showMessage('Error', 'error');
-            }
-        }
-
-        async function deleteEmail(email) {
-            if (!confirm(`Delete ${email}?`)) return;
-            try {
-                const response = await fetch(`${apiUrl}/admin/delete-email/${email}`, {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password: 'OSM77' })
-                });
-                if (response.ok) {
-                    showMessage('✅ Deleted', 'success');
-                    loadAdminEmails();
-                }
-            } catch {
-                showMessage('Error', 'error');
-            }
-        }
-
-        function logoutAdmin() {
-            document.getElementById('adminLogin').style.display = 'block';
-            document.getElementById('adminPanel').style.display = 'none';
-            document.getElementById('adminPassword').value = '';
-        }
-
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text);
-            const feedback = document.createElement('div');
-            feedback.style.cssText = 'position:fixed;top:20px;right:20px;background:#22c55e;color:#fff;padding:12px 20px;border-radius:10px;z-index:200;font-weight:700;';
-            feedback.textContent = '✅ Copied!';
-            document.body.appendChild(feedback);
-            setTimeout(() => feedback.remove(), 2000);
-        }
-
-        function showMessage(text, type) {
-            const div = document.createElement('div');
-            div.className = `message ${type}`;
-            div.textContent = text;
-            document.getElementById('emailsResult').prepend(div);
-            setTimeout(() => div.remove(), 3000);
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        function renderMessageText(text, links) {
-            if (!links || links.length === 0) return linkify(escapeHtml(text));
-
-            const sorted = [...links].sort((a, b) => a.offset - b.offset);
-            let html = '';
-            let cursor = 0;
-
-            sorted.forEach(link => {
-                if (link.offset < cursor) return;
-                html += linkify(escapeHtml(text.substring(cursor, link.offset)));
-                const safeUrl = escapeHtml(link.url);
-                const safeLabel = escapeHtml(link.text);
-                html += `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="woven-link">${safeLabel}</a>`;
-                cursor = link.offset + link.length;
-            });
-
-            html += linkify(escapeHtml(text.substring(cursor)));
-            return html;
-        }
-
-        function linkify(escapedText) {
-            const urlPattern = /(https?:\/\/[^\s<>"']+)/g;
-            return escapedText.replace(urlPattern, (url) => {
-                let trailing = '';
-                const trailingMatch = url.match(/[.,!?;:)\]]+$/);
-                if (trailingMatch) {
-                    trailing = trailingMatch[0];
-                    url = url.slice(0, -trailing.length);
-                }
-                return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="inline-link">${url}</a>${trailing}`;
-            });
-        }
-    </script>
-</body>
-</html>
+            c
