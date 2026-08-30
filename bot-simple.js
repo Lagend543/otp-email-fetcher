@@ -36,6 +36,36 @@ function generateCode() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+// Telegram often sends links as styled hyperlinks (e.g. "Restart membership")
+// where the actual URL is NOT written anywhere in the visible text - it only
+// lives in the message's "entities" metadata. Plain regex on the text can
+// never find these. This pulls them out using the real URL + the exact
+// visible label Telegram shows, without touching the raw text at all.
+function extractEntityLinks(text, entities) {
+  if (!entities || !Array.isArray(entities)) return [];
+
+  const links = [];
+  const seen = new Set();
+
+  entities.forEach(entity => {
+    let url = null;
+
+    if (entity.type === 'text_link' && entity.url) {
+      url = entity.url; // hidden link behind styled text, e.g. "Restart membership"
+    } else if (entity.type === 'url') {
+      url = text.substring(entity.offset, entity.offset + entity.length); // plain visible URL
+    }
+
+    if (url && !seen.has(url)) {
+      const label = text.substring(entity.offset, entity.offset + entity.length);
+      links.push({ text: label, url: url });
+      seen.add(url);
+    }
+  });
+
+  return links;
+}
+
 // Remove messages older than MESSAGE_TTL_MS across all tracked emails.
 // Keeps things "fresh only" - no old mail sits around.
 function cleanupOldMessages() {
@@ -112,11 +142,19 @@ bot.on('message', (msg) => {
     return;
   }
 
+  // Grab hidden hyperlink URLs from Telegram's formatting metadata
+  // (entities for regular messages, caption_entities for media captions)
+  const entities = msg.entities || msg.caption_entities || [];
+  const links = extractEntityLinks(text, entities);
+
   const timestamp = new Date().toISOString();
   
   console.log(`\n📨 NEW MESSAGE FROM GROUP:`);
   console.log(`   Text length: ${text.length} chars`);
   console.log(`   Preview: ${text.substring(0, 100)}...`);
+  if (links.length > 0) {
+    console.log(`   🔗 Found ${links.length} link(s): ${links.map(l => `"${l.text}"`).join(', ')}`);
+  }
   
   // Load stored emails to check
   loadData();
@@ -137,10 +175,11 @@ bot.on('message', (msg) => {
     console.log(`📧 Storing FULL email text for: ${foundEmails.join(', ')}`);
     
     foundEmails.forEach(email => {
-      // Store complete message as-is
+      // Store complete message as-is, plus any hidden hyperlink URLs found
       emailsData.emails[email].messages.unshift({
         id: msg.message_id,
-        text: text,  // FULL TEXT - no parsing!
+        text: text,  // FULL TEXT - no parsing, no changes!
+        links: links, // extra data only, doesn't touch the raw text above
         timestamp: timestamp
       });
 
@@ -283,4 +322,4 @@ process.on('SIGTERM', () => {
   bot.stopPolling();
   process.exit(0);
 });
-  
+      
