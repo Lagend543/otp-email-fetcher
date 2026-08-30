@@ -8,6 +8,8 @@ const BOT_TOKEN = process.env.BOT_TOKEN || '8591620877:AAEPG8St3Z62odg2jwzWZIDuU
 const GROUP_ID = parseInt(process.env.GROUP_ID || '-1004424660443');
 const PORT = process.env.PORT || 3000;
 const ADMIN_PASSWORD = 'OSM77';
+const MAX_MESSAGES_PER_EMAIL = 3;   // Only keep the 3 freshest messages per email
+const MESSAGE_TTL_MS = 60 * 60 * 1000; // Auto-delete messages older than 1 hour
 
 // Data file
 const dataFile = '/tmp/data.json';
@@ -32,6 +34,27 @@ function saveData() {
 // Generate code
 function generateCode() {
   return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Remove messages older than MESSAGE_TTL_MS across all tracked emails.
+// Keeps things "fresh only" - no old mail sits around.
+function cleanupOldMessages() {
+  const now = Date.now();
+  let removedCount = 0;
+
+  Object.keys(emailsData.emails).forEach(email => {
+    const before = emailsData.emails[email].messages.length;
+    emailsData.emails[email].messages = emailsData.emails[email].messages.filter(msg => {
+      const age = now - new Date(msg.timestamp).getTime();
+      return age <= MESSAGE_TTL_MS;
+    });
+    removedCount += before - emailsData.emails[email].messages.length;
+  });
+
+  if (removedCount > 0) {
+    saveData();
+    console.log(`🧹 Cleanup: removed ${removedCount} message(s) older than 1 hour`);
+  }
 }
 
 // Initialize bot WITHOUT auto-polling first, so we can clear any webhook/conflicts
@@ -121,9 +144,9 @@ bot.on('message', (msg) => {
         timestamp: timestamp
       });
 
-      // Keep last 50 messages per email
-      if (emailsData.emails[email].messages.length > 50) {
-        emailsData.emails[email].messages = emailsData.emails[email].messages.slice(0, 50);
+      // Keep only the freshest N messages per email (newest first, since we unshift)
+      if (emailsData.emails[email].messages.length > MAX_MESSAGES_PER_EMAIL) {
+        emailsData.emails[email].messages = emailsData.emails[email].messages.slice(0, MAX_MESSAGES_PER_EMAIL);
       }
       
       console.log(`   Stored message for ${email} (total: ${emailsData.emails[email].messages.length})`);
@@ -149,6 +172,7 @@ app.use(express.json());
 // API: Get all emails
 app.get('/api/emails', (req, res) => {
   loadData();
+  cleanupOldMessages();
   const list = Object.keys(emailsData.emails).map(email => ({
     email,
     code: emailsData.emails[email].code,
@@ -160,6 +184,8 @@ app.get('/api/emails', (req, res) => {
 // API: Get messages for code
 app.get('/api/messages/:code', (req, res) => {
   loadData();
+  cleanupOldMessages();
+
   const code = req.params.code;
   const email = Object.keys(emailsData.emails).find(e => emailsData.emails[e].code === code);
   
@@ -167,17 +193,20 @@ app.get('/api/messages/:code', (req, res) => {
     return res.status(404).json({ error: 'Invalid code' });
   }
   
+  const freshMessages = emailsData.emails[email].messages.slice(0, MAX_MESSAGES_PER_EMAIL);
+
   res.json({
     email,
     code,
-    messageCount: emailsData.emails[email].messages.length,
-    messages: emailsData.emails[email].messages
+    messageCount: freshMessages.length,
+    messages: freshMessages
   });
 });
 
 // API: All messages
 app.get('/api/all-messages', (req, res) => {
   loadData();
+  cleanupOldMessages();
   const all = [];
   Object.keys(emailsData.emails).forEach(email => {
     emailsData.emails[email].messages.forEach(msg => {
@@ -242,6 +271,11 @@ app.listen(PORT, '0.0.0.0', () => {
 });
 
 loadData();
+cleanupOldMessages();
+
+// Run cleanup every 5 minutes in the background, so messages expire
+// even if nobody is actively checking the site
+setInterval(cleanupOldMessages, 5 * 60 * 1000);
 
 // Save on exit
 process.on('SIGTERM', () => {
