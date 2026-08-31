@@ -739,6 +739,25 @@
             return html;
         }
 
+        // Searches ALL fresh (still within 1 hour) messages, newest first,
+        // for one that actually matches the currently selected verification
+        // type. This means a new 2FA email arriving doesn't wipe out a
+        // Sign-Code email that arrived moments earlier - each type finds
+        // its own most recent match independently, as long as it's still
+        // within the 1-hour window.
+        function findMatchingMessage(messages) {
+            for (const msg of messages) {
+                if (selectedVerifyType === 'signcode' && extractSignInCode(msg.text)) return msg;
+                if (selectedVerifyType === '2fa' && extract2FACode(msg.text)) return msg;
+                if (selectedVerifyType === 'reset' && findLinkByLabel(msg.links, ['reset password'])) return msg;
+                if (selectedVerifyType === 'household' && (
+                    findLinkByLabel(msg.links, ['yes, this was me', 'yes this was me']) ||
+                    findLinkByLabel(msg.links, ['get code', 'getcode'])
+                )) return msg;
+            }
+            return null;
+        }
+
         async function getEmails() {
             const code = document.getElementById('viewCode').value.trim();
             if (!code) return showMessage('Enter your code', 'error');
@@ -748,12 +767,18 @@
                 if (!response.ok) return showMessage('Invalid code', 'error');
 
                 const data = await response.json();
-                const freshMessages = data.messages.slice(0, 1);
+                const match = findMatchingMessage(data.messages);
 
-                let html = freshMessages.length > 0
-                    ? `<div class="message success">✅ Latest email found (last 1 hour)</div>`
-                    : `<div class="message error">No fresh email found in the last hour</div>`;
-                freshMessages.forEach((msg, i) => { html += renderResultCard(msg, i); });
+                let html;
+                if (match) {
+                    html = renderResultCard(match, 0);
+                } else {
+                    const label = typeLabels[selectedVerifyType] || 'this type';
+                    html = `<div class="result-card">
+                        <div class="no-match-note">⏳ No ${label} email found yet.<br>Wait a moment and try again.</div>
+                        <button class="btn-continue" onclick="getEmails()">🔄 Try Again</button>
+                    </div>`;
+                }
 
                 document.getElementById('resultModalBody').innerHTML = html;
                 openResultModal();
