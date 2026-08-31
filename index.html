@@ -580,4 +580,325 @@
                 });
             });
         } catch (e) {
-            c
+            console.error('vtype setup failed', e);
+        }
+
+        // Start checking connection status right away - don't wait on
+        // DOMContentLoaded (script already runs at the end of <body>, so
+        // the DOM is ready) and don't let anything above block this.
+        checkApiStatus();
+        setInterval(checkApiStatus, 5000);
+
+        function openAdmin() { document.getElementById('adminModal').style.display = 'flex'; }
+        function closeAdmin() { document.getElementById('adminModal').style.display = 'none'; }
+        function openResultModal() { document.getElementById('resultModal').style.display = 'flex'; }
+        function closeResultModal() { document.getElementById('resultModal').style.display = 'none'; }
+
+        async function checkApiStatus() {
+            const debugEl = document.getElementById('debugInfo');
+            try {
+                // Hard 15-second timeout - a request should never be allowed
+                // to hang forever with no feedback, even on a slow cold start.
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+                const response = await fetch(`${apiUrl}/health`, { signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                if (response.ok) {
+                    document.getElementById('apiStatus').className = 'api-status connected';
+                    document.getElementById('apiStatusText').textContent = 'Connected';
+                    if (debugEl) debugEl.textContent = '';
+                } else {
+                    setDisconnected();
+                    if (debugEl) debugEl.textContent = `HTTP ${response.status} from server`;
+                }
+            } catch (err) {
+                setDisconnected();
+                // Show the REAL browser error on screen so we're not
+                // guessing blind - CORS blocks, timeouts, and DNS failures
+                // all show different messages here.
+                if (debugEl) debugEl.textContent = `Error: ${err.name} — ${err.message}`;
+            }
+        }
+
+        function setDisconnected() {
+            document.getElementById('apiStatus').className = 'api-status disconnected';
+            document.getElementById('apiStatusText').textContent = 'Disconnected';
+        }
+
+        function extractLikelyCode(text) {
+            const patterns = [
+                /code to (?:sign in|confirm|verify|continue)[^\d]{0,40}(\d{4,8})/i,
+                /sign[\s-]?in[^\d]{0,40}(\d{4,8})/i,
+                /verification code[^\d]{0,20}(\d{4,8})/i,
+                /\bcode\b[^\d]{0,20}(\d{4,8})/i,
+                /\b(\d{4,8})\b/
+            ];
+            for (const p of patterns) {
+                const m = text.match(p);
+                if (m) return m[1];
+            }
+            return null;
+        }
+
+        // Finds a hidden hyperlink (extracted by the bot from Telegram's
+        // formatting metadata) whose visible label matches one of the given
+        // phrases - e.g. the "Reset Password" or "Yes, This Was Me" link
+        // text. Whitespace/case differences are normalized before matching.
+        function findLinkByLabel(links, phrases) {
+            if (!links || links.length === 0) return null;
+            const normalize = s => s.replace(/\s+/g, ' ').trim().toLowerCase();
+            for (const link of links) {
+                const label = normalize(link.text);
+                for (const phrase of phrases) {
+                    if (label.includes(phrase)) return link;
+                }
+            }
+            return null;
+        }
+
+        function toggleFull(id) {
+            const el = document.getElementById(id);
+            const arrow = document.getElementById(id + '-arrow');
+            const isHidden = el.style.display === 'none';
+            el.style.display = isHidden ? 'block' : 'none';
+            arrow.textContent = isHidden ? '▴' : '▾';
+        }
+
+        function otpRevealHtml(label, code) {
+            return `<div class="otp-reveal" onclick="copyToClipboard('${code}')">
+                <div class="otp-label">${label}</div>
+                <div class="otp-code">${code}</div>
+                <div class="otp-hint">Tap to copy</div>
+            </div>`;
+        }
+
+        function linkRevealHtml(heading, url) {
+            const safeUrl = escapeHtml(url);
+            return `<div class="link-reveal">
+                <div class="link-heading">${escapeHtml(heading)}</div>
+                <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="click-me-btn">CLICK ME</a>
+            </div>`;
+        }
+
+        // Renders the result according to the currently selected
+        // verification type - each type looks for a different pattern
+        // (a code, or a specific hyperlink) inside the same raw message.
+        // The full raw email is always available below via the toggle,
+        // regardless of what was found up top.
+        function renderResultCard(msg, index) {
+            const date = new Date(msg.timestamp).toLocaleString();
+            const bodyId = `msg-body-${index}`;
+            let topHtml = '';
+            let foundSomething = false;
+
+            if (selectedVerifyType === 'signcode') {
+                const code = extractLikelyCode(msg.text);
+                if (code) { topHtml = otpRevealHtml('Sign-in Code', code); foundSomething = true; }
+            } else if (selectedVerifyType === '2fa') {
+                const code = extractLikelyCode(msg.text);
+                if (code) { topHtml = otpRevealHtml('2FA Verification Code', code); foundSomething = true; }
+            } else if (selectedVerifyType === 'reset') {
+                const link = findLinkByLabel(msg.links, ['reset password']);
+                if (link) { topHtml = linkRevealHtml('Reset Your Password', link.url); foundSomething = true; }
+            } else if (selectedVerifyType === 'household') {
+                const confirmLink = findLinkByLabel(msg.links, ['yes, this was me', 'yes this was me']);
+                const codeLink = findLinkByLabel(msg.links, ['get code', 'getcode']);
+                if (confirmLink) { topHtml = linkRevealHtml('Update Household', confirmLink.url); foundSomething = true; }
+                else if (codeLink) { topHtml = linkRevealHtml('Get Household Code', codeLink.url); foundSomething = true; }
+            }
+
+            let html = `<div class="result-card">`;
+            html += `<div class="result-date">${date}</div>`;
+
+            if (foundSomething) {
+                html += topHtml;
+            } else {
+                html += `<div class="no-match-note">No match found for this verification type in the latest email — showing full email below.</div>`;
+            }
+
+            html += `<button class="toggle-full-btn" onclick="toggleFull('${bodyId}')">
+                📄 ${foundSomething ? 'View full email' : 'Full email'} <span id="${bodyId}-arrow">${foundSomething ? '▾' : '▴'}</span>
+            </button>`;
+
+            html += `<div class="full-body" id="${bodyId}" style="display:${foundSomething ? 'none' : 'block'};">
+                <div class="message-box">${renderMessageText(msg.text, msg.links)}</div>
+            </div>`;
+
+            html += `</div>`;
+            return html;
+        }
+
+        async function getEmails() {
+            const code = document.getElementById('viewCode').value.trim();
+            if (!code) return showMessage('Enter your code', 'error');
+
+            try {
+                const response = await fetch(`${apiUrl}/messages/${code}`);
+                if (!response.ok) return showMessage('Invalid code', 'error');
+
+                const data = await response.json();
+                const freshMessages = data.messages.slice(0, 1);
+
+                let html = freshMessages.length > 0
+                    ? `<div class="message success">✅ Latest email found (last 1 hour)</div>`
+                    : `<div class="message error">No fresh email found in the last hour</div>`;
+                freshMessages.forEach((msg, i) => { html += renderResultCard(msg, i); });
+
+                document.getElementById('resultModalBody').innerHTML = html;
+                openResultModal();
+            } catch {
+                showMessage('Error connecting', 'error');
+            }
+        }
+
+        async function verifyAdmin() {
+            const password = document.getElementById('adminPassword').value;
+            try {
+                const response = await fetch(`${apiUrl}/admin/verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+
+                if (response.ok) {
+                    document.getElementById('adminLogin').style.display = 'none';
+                    document.getElementById('adminPanel').style.display = 'block';
+                    loadAdminEmails();
+                } else {
+                    showMessage('Invalid password', 'error');
+                }
+            } catch {
+                showMessage('Error', 'error');
+            }
+        }
+
+        async function loadAdminEmails() {
+            try {
+                const response = await fetch(`${apiUrl}/emails`);
+                const emails = await response.json();
+
+                let html = '';
+                emails.forEach(item => {
+                    html += `<div class="email-item">
+                        <div>
+                            <div style="color: var(--red); font-weight: 700; margin-bottom: 4px;">${item.email}</div>
+                            <div style="color: var(--text-dim); font-size: 0.85em;">Code: ${item.code} | ${item.messages} messages</div>
+                        </div>
+                        <button class="btn-primary btn-danger" onclick="deleteEmail('${item.email}')">Delete</button>
+                    </div>`;
+                });
+
+                document.getElementById('adminEmailList').innerHTML = html || '<p style="color: var(--text-dim);">No emails</p>';
+            } catch {
+                showMessage('Error', 'error');
+            }
+        }
+
+        async function addEmail() {
+            const email = document.getElementById('adminEmail').value.trim();
+            if (!email) return showMessage('Enter email', 'error');
+
+            try {
+                const response = await fetch(`${apiUrl}/admin/add-email`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password: 'OSM77' })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    showMessage(`✅ Added! Code: ${data.code}`, 'success');
+                    document.getElementById('adminEmail').value = '';
+                    loadAdminEmails();
+                } else {
+                    showMessage('Error', 'error');
+                }
+            } catch {
+                showMessage('Error', 'error');
+            }
+        }
+
+        async function deleteEmail(email) {
+            if (!confirm(`Delete ${email}?`)) return;
+            try {
+                const response = await fetch(`${apiUrl}/admin/delete-email/${email}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: 'OSM77' })
+                });
+                if (response.ok) {
+                    showMessage('✅ Deleted', 'success');
+                    loadAdminEmails();
+                }
+            } catch {
+                showMessage('Error', 'error');
+            }
+        }
+
+        function logoutAdmin() {
+            document.getElementById('adminLogin').style.display = 'block';
+            document.getElementById('adminPanel').style.display = 'none';
+            document.getElementById('adminPassword').value = '';
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text);
+            const feedback = document.createElement('div');
+            feedback.style.cssText = 'position:fixed;top:20px;right:20px;background:#22c55e;color:#fff;padding:12px 20px;border-radius:10px;z-index:200;font-weight:700;';
+            feedback.textContent = '✅ Copied!';
+            document.body.appendChild(feedback);
+            setTimeout(() => feedback.remove(), 2000);
+        }
+
+        function showMessage(text, type) {
+            const div = document.createElement('div');
+            const bg = type === 'error' ? '#ef4444' : '#22c55e';
+            div.style.cssText = `position:fixed; top:20px; left:50%; transform:translateX(-50%); background:${bg}; color:#fff; padding:12px 22px; border-radius:10px; z-index:300; font-weight:700; box-shadow:0 10px 25px rgba(0,0,0,0.4);`;
+            div.textContent = text;
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 3000);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function renderMessageText(text, links) {
+            if (!links || links.length === 0) return linkify(escapeHtml(text));
+
+            const sorted = [...links].sort((a, b) => a.offset - b.offset);
+            let html = '';
+            let cursor = 0;
+
+            sorted.forEach(link => {
+                if (link.offset < cursor) return;
+                html += linkify(escapeHtml(text.substring(cursor, link.offset)));
+                const safeUrl = escapeHtml(link.url);
+                const safeLabel = escapeHtml(link.text);
+                html += `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="woven-link">${safeLabel}</a>`;
+                cursor = link.offset + link.length;
+            });
+
+            html += linkify(escapeHtml(text.substring(cursor)));
+            return html;
+        }
+
+        function linkify(escapedText) {
+            const urlPattern = /(https?:\/\/[^\s<>"']+)/g;
+            return escapedText.replace(urlPattern, (url) => {
+                let trailing = '';
+                const trailingMatch = url.match(/[.,!?;:)\]]+$/);
+                if (trailingMatch) {
+                    trailing = trailingMatch[0];
+                    url = url.slice(0, -trailing.length);
+                }
+                return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="inline-link">${url}</a>${trailing}`;
+            });
+        }
+    </script>
+</body>
+</html>
