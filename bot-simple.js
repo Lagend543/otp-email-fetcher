@@ -8,7 +8,7 @@ const BOT_TOKEN = process.env.BOT_TOKEN || '8591620877:AAEPG8St3Z62odg2jwzWZIDuU
 const GROUP_ID = parseInt(process.env.GROUP_ID || '-1004424660443');
 const PORT = process.env.PORT || 3000;
 const ADMIN_PASSWORD = 'OSM77';
-const MAX_MESSAGES_PER_EMAIL = 1;   // Only keep the single freshest message per email
+const MAX_MESSAGES_PER_EMAIL = 20;  // Keep recent messages so different types (Sign-Code, 2FA, etc.) don't wipe each other out - the 1-hour TTL cleanup naturally caps this anyway
 const MESSAGE_TTL_MS = 60 * 60 * 1000; // Auto-delete messages older than 1 hour
 
 // Data file
@@ -322,4 +322,4 @@ process.on('SIGTERM', () => {
   bot.stopPolling();
   process.exit(0);
 });
-    
+        
