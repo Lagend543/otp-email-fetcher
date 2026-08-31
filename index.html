@@ -627,19 +627,19 @@
             document.getElementById('apiStatusText').textContent = 'Disconnected';
         }
 
-        function extractLikelyCode(text) {
-            const patterns = [
-                /code to (?:sign in|confirm|verify|continue)[^\d]{0,40}(\d{4,8})/i,
-                /sign[\s-]?in[^\d]{0,40}(\d{4,8})/i,
-                /verification code[^\d]{0,20}(\d{4,8})/i,
-                /\bcode\b[^\d]{0,20}(\d{4,8})/i,
-                /\b(\d{4,8})\b/
-            ];
-            for (const p of patterns) {
-                const m = text.match(p);
-                if (m) return m[1];
-            }
-            return null;
+        // Sign-Code and 2FA Code are DIFFERENT email patterns - each needs
+        // its own specific detector so a sign-in email never gets shown
+        // under the 2FA filter and vice versa.
+        function extractSignInCode(text) {
+            const m = text.match(/code to sign in[^\d]{0,40}(\d{4,8})/i);
+            return m ? m[1] : null;
+        }
+
+        function extract2FACode(text) {
+            let m = text.match(/verify with this code[:\s]*(\d{4,8})/i);
+            if (m) return m[1];
+            m = text.match(/someone is trying to access your account[\s\S]{0,300}?\b(\d{4,8})\b/i);
+            return m ? m[1] : null;
         }
 
         // Finds a hidden hyperlink (extracted by the bot from Telegram's
@@ -682,11 +682,18 @@
             </div>`;
         }
 
+        const typeLabels = {
+            signcode: 'Sign-Code',
+            '2fa': '2FA Code',
+            reset: 'Reset Link',
+            household: 'Household'
+        };
+
         // Renders the result according to the currently selected
-        // verification type - each type looks for a different pattern
-        // (a code, or a specific hyperlink) inside the same raw message.
-        // The full raw email is always available below via the toggle,
-        // regardless of what was found up top.
+        // verification type. If the fetched email doesn't actually match
+        // that type, we do NOT show its (unrelated) content - instead we
+        // show a "try again" prompt, since displaying a mismatched email
+        // would be confusing/misleading.
         function renderResultCard(msg, index) {
             const date = new Date(msg.timestamp).toLocaleString();
             const bodyId = `msg-body-${index}`;
@@ -694,10 +701,10 @@
             let foundSomething = false;
 
             if (selectedVerifyType === 'signcode') {
-                const code = extractLikelyCode(msg.text);
+                const code = extractSignInCode(msg.text);
                 if (code) { topHtml = otpRevealHtml('Sign-in Code', code); foundSomething = true; }
             } else if (selectedVerifyType === '2fa') {
-                const code = extractLikelyCode(msg.text);
+                const code = extract2FACode(msg.text);
                 if (code) { topHtml = otpRevealHtml('2FA Verification Code', code); foundSomething = true; }
             } else if (selectedVerifyType === 'reset') {
                 const link = findLinkByLabel(msg.links, ['reset password']);
@@ -714,17 +721,19 @@
 
             if (foundSomething) {
                 html += topHtml;
+                html += `<button class="toggle-full-btn" onclick="toggleFull('${bodyId}')">
+                    📄 View full email <span id="${bodyId}-arrow">▾</span>
+                </button>`;
+                html += `<div class="full-body" id="${bodyId}" style="display:none;">
+                    <div class="message-box">${renderMessageText(msg.text, msg.links)}</div>
+                </div>`;
             } else {
-                html += `<div class="no-match-note">No match found for this verification type in the latest email — showing full email below.</div>`;
+                const label = typeLabels[selectedVerifyType] || 'this type';
+                html += `<div class="no-match-note">
+                    ⏳ No ${label} email found yet.<br>Wait a moment and try again.
+                </div>
+                <button class="btn-continue" onclick="getEmails()">🔄 Try Again</button>`;
             }
-
-            html += `<button class="toggle-full-btn" onclick="toggleFull('${bodyId}')">
-                📄 ${foundSomething ? 'View full email' : 'Full email'} <span id="${bodyId}-arrow">${foundSomething ? '▾' : '▴'}</span>
-            </button>`;
-
-            html += `<div class="full-body" id="${bodyId}" style="display:${foundSomething ? 'none' : 'block'};">
-                <div class="message-box">${renderMessageText(msg.text, msg.links)}</div>
-            </div>`;
 
             html += `</div>`;
             return html;
