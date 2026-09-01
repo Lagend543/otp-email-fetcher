@@ -739,25 +739,6 @@
             return html;
         }
 
-        // Searches ALL fresh (still within 1 hour) messages, newest first,
-        // for one that actually matches the currently selected verification
-        // type. This means a new 2FA email arriving doesn't wipe out a
-        // Sign-Code email that arrived moments earlier - each type finds
-        // its own most recent match independently, as long as it's still
-        // within the 1-hour window.
-        function findMatchingMessage(messages) {
-            for (const msg of messages) {
-                if (selectedVerifyType === 'signcode' && extractSignInCode(msg.text)) return msg;
-                if (selectedVerifyType === '2fa' && extract2FACode(msg.text)) return msg;
-                if (selectedVerifyType === 'reset' && findLinkByLabel(msg.links, ['reset password'])) return msg;
-                if (selectedVerifyType === 'household' && (
-                    findLinkByLabel(msg.links, ['yes, this was me', 'yes this was me']) ||
-                    findLinkByLabel(msg.links, ['get code', 'getcode'])
-                )) return msg;
-            }
-            return null;
-        }
-
         async function getEmails() {
             const code = document.getElementById('viewCode').value.trim();
             if (!code) return showMessage('Enter your code', 'error');
@@ -767,7 +748,9 @@
                 if (!response.ok) return showMessage('Invalid code', 'error');
 
                 const data = await response.json();
-                const match = findMatchingMessage(data.messages);
+                // Backend already keys messages by type - just look up the
+                // slot for whichever type is currently selected.
+                const match = data.types ? data.types[selectedVerifyType] : null;
 
                 let html;
                 if (match) {
